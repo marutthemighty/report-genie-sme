@@ -89,19 +89,17 @@ const Sidebar = ({ onCreateReport }: SidebarProps) => {
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src="/placeholder.svg" alt="User" />
-              <AvatarFallback className="bg-blue-100 text-blue-600">JD</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">John Doe</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">john@company.com</p>
+            <div className="flex items-center space-x-3">
+              <UserDropdown />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">John Doe</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">john@company.com</p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-1 ml-2">
             <NotificationBell />
             <ThemeToggle />
-            <UserDropdown />
           </div>
         </div>
       </div>

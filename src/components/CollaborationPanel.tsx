@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MessageSquare, Send, Bot } from 'lucide-react';
+import { MessageSquare, Send, Bot, Edit, Trash2, Check, X } from 'lucide-react';
 
 interface Comment {
   id: string;
@@ -17,6 +17,8 @@ interface Comment {
 
 const CollaborationPanel = () => {
   const [newComment, setNewComment] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
   const [comments, setComments] = useState<Comment[]>([
     {
       id: '1',
@@ -66,6 +68,36 @@ const CollaborationPanel = () => {
     }, 2000);
   };
 
+  const handleEdit = (commentId: string, currentContent: string) => {
+    setEditingId(commentId);
+    setEditContent(currentContent);
+  };
+
+  const handleSaveEdit = (commentId: string) => {
+    setComments(prev => prev.map(comment => 
+      comment.id === commentId 
+        ? { ...comment, content: editContent }
+        : comment
+    ));
+    setEditingId(null);
+    setEditContent('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditContent('');
+  };
+
+  const handleDelete = (commentId: string) => {
+    if (confirm('Are you sure you want to delete this comment?')) {
+      setComments(prev => prev.filter(comment => comment.id !== commentId));
+    }
+  };
+
+  const canModifyComment = (comment: Comment) => {
+    return comment.user === 'John Doe' && !comment.isAI;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -89,8 +121,66 @@ const CollaborationPanel = () => {
                   <span className="text-sm font-medium">{comment.user}</span>
                   {comment.isAI && <Badge variant="secondary" className="text-xs">AI</Badge>}
                   <span className="text-xs text-gray-500">{comment.timestamp}</span>
+                  {canModifyComment(comment) && (
+                    <div className="flex gap-1 ml-auto">
+                      {editingId === comment.id ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSaveEdit(comment.id)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Check className="w-3 h-3 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelEdit}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="w-3 h-3 text-red-600" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(comment.id, comment.content)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(comment.id)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-600" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">{comment.content}</p>
+                {editingId === comment.id ? (
+                  <Input
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveEdit(comment.id);
+                      } else if (e.key === 'Escape') {
+                        handleCancelEdit();
+                      }
+                    }}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{comment.content}</p>
+                )}
               </div>
             </div>
           ))}

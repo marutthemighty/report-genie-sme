@@ -16,35 +16,94 @@ import ConsentModal from '@/components/ConsentModal';
 
 const Index = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [timeRange, setTimeRange] = useState('6m');
+  const [reports, setReports] = useState([
+    {
+      id: '1',
+      name: 'Q2 Shopify Sales Performance',
+      type: 'Sales Performance',
+      dataSource: 'Shopify',
+      status: 'Generated',
+      createdBy: 'John Doe',
+      createdAt: '2024-01-15',
+      aiScore: 92,
+      revenue: '$128,450',
+      growth: '+15.3%'
+    }
+  ]);
 
   // Sample data that changes based on time range
   const getRevenueData = (range: string) => {
-    const baseData = [
-      { month: 'Jan', revenue: 42000, orders: 145 },
-      { month: 'Feb', revenue: 45000, orders: 152 },
-      { month: 'Mar', revenue: 38000, orders: 138 },
-      { month: 'Apr', revenue: 52000, orders: 165 },
-      { month: 'May', revenue: 48000, orders: 158 },
-      { month: 'Jun', revenue: 55000, orders: 172 },
-    ];
-
-    const multipliers = {
-      '7d': 0.1,
-      '30d': 0.3,
-      '90d': 0.7,
-      '6m': 1,
-      '1y': 1.5,
-      'all': 2
-    };
-
-    const multiplier = multipliers[range as keyof typeof multipliers] || 1;
+    const now = new Date();
+    let dataPoints: any[] = [];
     
-    return baseData.map(item => ({
-      ...item,
-      revenue: Math.round(item.revenue * multiplier),
-      orders: Math.round(item.orders * multiplier)
-    }));
+    switch (range) {
+      case '7d':
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(now);
+          date.setDate(date.getDate() - i);
+          dataPoints.push({
+            month: date.toLocaleDateString('en', { weekday: 'short' }),
+            revenue: Math.round(42000 + Math.random() * 20000),
+            orders: Math.round(145 + Math.random() * 50)
+          });
+        }
+        break;
+      case '30d':
+        for (let i = 29; i >= 0; i -= 3) {
+          const date = new Date(now);
+          date.setDate(date.getDate() - i);
+          dataPoints.push({
+            month: date.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+            revenue: Math.round(42000 + Math.random() * 20000),
+            orders: Math.round(145 + Math.random() * 50)
+          });
+        }
+        break;
+      case '90d':
+        for (let i = 2; i >= 0; i--) {
+          const date = new Date(now);
+          date.setMonth(date.getMonth() - i);
+          dataPoints.push({
+            month: date.toLocaleDateString('en', { month: 'short' }),
+            revenue: Math.round(42000 + Math.random() * 20000),
+            orders: Math.round(145 + Math.random() * 50)
+          });
+        }
+        break;
+      case '1y':
+        for (let i = 11; i >= 0; i--) {
+          const date = new Date(now);
+          date.setMonth(date.getMonth() - i);
+          dataPoints.push({
+            month: date.toLocaleDateString('en', { month: 'short' }),
+            revenue: Math.round(42000 + Math.random() * 20000),
+            orders: Math.round(145 + Math.random() * 50)
+          });
+        }
+        break;
+      case 'all':
+        for (let i = 23; i >= 0; i--) {
+          const date = new Date(now);
+          date.setMonth(date.getMonth() - i);
+          dataPoints.push({
+            month: date.toLocaleDateString('en', { month: 'short', year: '2-digit' }),
+            revenue: Math.round(42000 + Math.random() * 20000),
+            orders: Math.round(145 + Math.random() * 50)
+          });
+        }
+        break;
+      default: // 6m
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        dataPoints = months.map(month => ({
+          month,
+          revenue: Math.round(42000 + Math.random() * 20000),
+          orders: Math.round(145 + Math.random() * 50)
+        }));
+    }
+    
+    return dataPoints;
   };
 
   const getTrafficData = (range: string) => {
@@ -55,7 +114,7 @@ const Index = () => {
       { source: 'Referrals', visitors: 2800, percentage: 10 },
     ];
 
-    const multipliers = {
+    const multipliers: { [key: string]: number } = {
       '7d': 0.05,
       '30d': 0.2,
       '90d': 0.6,
@@ -64,7 +123,7 @@ const Index = () => {
       'all': 3
     };
 
-    const multiplier = multipliers[range as keyof typeof multipliers] || 1;
+    const multiplier = multipliers[range] || 1;
     
     return baseData.map(item => ({
       ...item,
@@ -85,6 +144,24 @@ const Index = () => {
     { value: '1y', label: 'Last 1 year' },
     { value: 'all', label: 'All time' }
   ];
+
+  const handleCreateReport = (reportData: any) => {
+    const newReport = {
+      id: Date.now().toString(),
+      name: reportData.name || `${reportData.dataSource} ${reportData.type}`,
+      type: reportData.type,
+      dataSource: reportData.dataSource,
+      status: 'Generated',
+      createdBy: 'John Doe',
+      createdAt: new Date().toISOString().split('T')[0],
+      aiScore: Math.floor(Math.random() * 30) + 70,
+      revenue: `$${Math.floor(Math.random() * 100000) + 50000}`,
+      growth: `+${(Math.random() * 20).toFixed(1)}%`
+    };
+    
+    setReports(prev => [newReport, ...prev]);
+    setIsCreateModalOpen(false);
+  };
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -251,23 +328,18 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      { action: 'Report generated', item: 'Q2 Sales Performance', time: '2 minutes ago', status: 'success' },
-                      { action: 'Data sync completed', item: 'Shopify Integration', time: '1 hour ago', status: 'success' },
-                      { action: 'Export completed', item: 'Traffic Analytics Report', time: '3 hours ago', status: 'success' },
-                      { action: 'Sync failed', item: 'Google Analytics', time: '1 day ago', status: 'error' },
-                    ].map((activity, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    {reports.slice(0, 4).map((report, index) => (
+                      <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
-                          <Badge variant={activity.status === 'success' ? 'default' : 'destructive'}>
-                            {activity.status}
+                          <Badge variant="default">
+                            Generated
                           </Badge>
                           <div>
-                            <p className="font-medium">{activity.action}</p>
-                            <p className="text-sm text-gray-500">{activity.item}</p>
+                            <p className="font-medium">Report generated: {report.name}</p>
+                            <p className="text-sm text-gray-500">{report.type}</p>
                           </div>
                         </div>
-                        <span className="text-sm text-gray-500">{activity.time}</span>
+                        <span className="text-sm text-gray-500">{report.createdAt}</span>
                       </div>
                     ))}
                   </div>
@@ -276,7 +348,7 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="ai-preview">
-              <AIPreview />
+              <AIPreview timeRange={timeRange} />
             </TabsContent>
 
             <TabsContent value="ai-insights">
@@ -292,9 +364,13 @@ const Index = () => {
 
       <CreateReportModal 
         isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateReport}
       />
-      <ConsentModal />
+      <ConsentModal 
+        isOpen={isConsentModalOpen}
+        onClose={() => setIsConsentModalOpen(false)}
+      />
     </div>
   );
 };

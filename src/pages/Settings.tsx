@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Settings as SettingsIcon, 
   Palette, 
@@ -21,24 +22,52 @@ import {
   Key
 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import ConsentModal from '@/components/ConsentModal';
 import { useThemeStore } from '@/stores/useThemeStore';
 
 const Settings = () => {
   const { theme, setTheme } = useThemeStore();
+  const { toast } = useToast();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(false);
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [integrations, setIntegrations] = useState([
     { id: 1, name: 'Shopify', status: 'connected', lastSync: '2 hours ago' },
     { id: 2, name: 'Google Analytics', status: 'disconnected', lastSync: 'Never' },
   ]);
 
   const handleAddIntegration = () => {
-    console.log('Add integration');
+    toast({
+      title: "Add Integration",
+      description: "Integration setup wizard would open here in a full implementation.",
+    });
+  };
+
+  const handleExportData = () => {
+    toast({
+      title: "Data Export Initiated",
+      description: "Your data export has been started. You'll receive an email when it's ready for download.",
+    });
+  };
+
+  const handleViewPrivacySettings = () => {
+    toast({
+      title: "Privacy Settings",
+      description: "Privacy settings dashboard would open here in a full implementation.",
+    });
+  };
+
+  const handleManageConsent = () => {
+    setIsConsentModalOpen(true);
   };
 
   const handleDeleteAccount = () => {
     if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      console.log('Delete account');
+      toast({
+        title: "Account Deletion",
+        description: "Account deletion process would be initiated here in a full implementation.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -225,15 +254,15 @@ const Settings = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" onClick={handleExportData}>
                   <Download className="w-4 h-4 mr-2" />
                   Export My Data
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" onClick={handleViewPrivacySettings}>
                   <User className="w-4 h-4 mr-2" />
                   View Privacy Settings
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" onClick={handleManageConsent}>
                   <Shield className="w-4 h-4 mr-2" />
                   Manage Consent Preferences
                 </Button>
@@ -269,6 +298,11 @@ const Settings = () => {
           </Card>
         </div>
       </main>
+
+      <ConsentModal 
+        isOpen={isConsentModalOpen}
+        onClose={() => setIsConsentModalOpen(false)}
+      />
     </div>
   );
 };
