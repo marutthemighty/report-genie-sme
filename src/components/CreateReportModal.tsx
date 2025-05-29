@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CalendarIcon } from '@/components/ui/calendar';
+import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
 
 interface CreateReportModalProps {
   isOpen: boolean;
@@ -50,7 +50,6 @@ const CreateReportModal = ({ isOpen, onClose }: CreateReportModalProps) => {
     setIsLoading(false);
     onClose();
     
-    // Here you would typically make an API call to create the report
     console.log('Creating report:', {
       reportName,
       dataSource,

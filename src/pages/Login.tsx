@@ -1,18 +1,18 @@
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { BarChart3, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { BarChart3, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,33 +20,42 @@ const Login = () => {
     setIsLoading(true);
     
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     setIsLoading(false);
-    console.log('Login attempt:', { email, password, rememberMe });
+    console.log('Login:', { email, password, rememberMe });
+  };
+
+  const handleRememberMeChange = (checked: boolean | "indeterminate") => {
+    setRememberMe(checked === true);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mb-4">
-            <BarChart3 className="w-8 h-8 text-white" />
+          <div className="flex items-center justify-center space-x-3 mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+              <BarChart3 className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">ReportAI</h1>
+              <p className="text-sm text-gray-500">Analytics Suite</p>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your ReportAI account</p>
         </div>
 
         <Card className="shadow-xl border-0">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-center text-xl">Sign In</CardTitle>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
+            <p className="text-gray-600">Sign in to your account to continue</p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email address</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
@@ -68,7 +77,7 @@ const Login = () => {
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
                     id="password"
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -88,24 +97,24 @@ const Login = () => {
               {/* Remember Me & Forgot Password */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="remember" 
+                  <Checkbox
+                    id="remember"
                     checked={rememberMe}
-                    onCheckedChange={setRememberMe}
+                    onCheckedChange={handleRememberMeChange}
                   />
                   <Label htmlFor="remember" className="text-sm text-gray-600">
                     Remember me
                   </Label>
                 </div>
-                <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
+                <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
                   Forgot password?
                 </Link>
               </div>
 
               {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3"
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -114,27 +123,23 @@ const Login = () => {
                     Signing in...
                   </>
                 ) : (
-                  <>
-                    Sign In
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
+                  'Sign In'
                 )}
               </Button>
-            </form>
 
-            {/* Social Login */}
-            <div className="mt-6">
+              {/* Divider */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
+                  <span className="w-full border-t border-gray-300" />
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or continue with</span>
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Button variant="outline" className="w-full">
+              {/* Social Login */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" type="button" className="w-full">
                   <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -143,32 +148,26 @@ const Login = () => {
                   </svg>
                   Google
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" type="button" className="w-full">
                   <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
                   </svg>
-                  Facebook
+                  Twitter
                 </Button>
               </div>
-            </div>
+            </form>
 
             {/* Sign Up Link */}
-            <p className="mt-6 text-center text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-blue-600 hover:text-blue-800 font-medium">
-                Sign up for free
-              </Link>
-            </p>
+            <div className="mt-6 text-center">
+              <p className="text-gray-600">
+                Don't have an account?{' '}
+                <Link to="/signup" className="text-blue-600 hover:text-blue-500 font-medium">
+                  Sign up for free
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <p className="mt-8 text-center text-xs text-gray-500">
-          By signing in, you agree to our{' '}
-          <a href="#" className="text-blue-600 hover:text-blue-800">Terms of Service</a>
-          {' '}and{' '}
-          <a href="#" className="text-blue-600 hover:text-blue-800">Privacy Policy</a>
-        </p>
       </div>
     </div>
   );
