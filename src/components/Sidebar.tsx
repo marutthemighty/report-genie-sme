@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { BarChart3, FileText, Settings, Plus, Home, Database, Bell, HelpCircle, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,11 @@ import ThemeToggle from './ThemeToggle';
 import UserDropdown from './UserDropdown';
 import NotificationBell from './NotificationBell';
 
-const Sidebar = () => {
+interface SidebarProps {
+  onCreateReport?: () => void;
+}
+
+const Sidebar = ({ onCreateReport }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeItem, setActiveItem] = useState(() => {
@@ -15,6 +20,9 @@ const Sidebar = () => {
     if (path === '/') return 'dashboard';
     if (path === '/reports') return 'reports';
     if (path === '/settings') return 'settings';
+    if (path === '/integrations') return 'integrations';
+    if (path === '/notifications') return 'notifications';
+    if (path === '/help') return 'help';
     return 'dashboard';
   });
 
@@ -22,7 +30,7 @@ const Sidebar = () => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/' },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports' },
     { id: 'create', label: 'Create Report', icon: Plus, action: 'create' },
-    { id: 'integrations', label: 'Integrations', icon: Database, path: '/settings' },
+    { id: 'integrations', label: 'Integrations', icon: Database, path: '/integrations' },
     { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
     { id: 'help', label: 'Help & Support', icon: HelpCircle, path: '/help' },
@@ -32,8 +40,7 @@ const Sidebar = () => {
     setActiveItem(item.id);
     
     if (item.action === 'create') {
-      // Trigger create report modal - this would need to be handled by parent component
-      console.log('Create report clicked');
+      onCreateReport?.();
       return;
     }
     
@@ -80,8 +87,8 @@ const Sidebar = () => {
 
       {/* User Profile */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
             <Avatar className="w-8 h-8">
               <AvatarImage src="/placeholder.svg" alt="User" />
               <AvatarFallback className="bg-blue-100 text-blue-600">JD</AvatarFallback>

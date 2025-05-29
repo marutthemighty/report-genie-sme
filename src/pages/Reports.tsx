@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, 
   Search, 
@@ -34,9 +35,10 @@ const Reports = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { toast } = useToast();
 
   // Sample reports data with real-looking data
-  const [reports] = useState([
+  const [reports, setReports] = useState([
     {
       id: '1',
       name: 'Q2 Shopify Sales Performance',
@@ -109,6 +111,33 @@ const Reports = () => {
     return matchesSearch && matchesStatus && matchesType;
   });
 
+  const handleEdit = (reportId: string) => {
+    toast({
+      title: "Edit Report",
+      description: `Opening editor for report ${reportId}`,
+    });
+    // Here you would navigate to the edit page or open an edit modal
+  };
+
+  const handleDownload = (reportId: string, reportName: string) => {
+    toast({
+      title: "Download Started",
+      description: `Downloading ${reportName}...`,
+    });
+    // Here you would trigger the actual download
+  };
+
+  const handleDelete = (reportId: string) => {
+    if (confirm('Are you sure you want to delete this report?')) {
+      setReports(prev => prev.filter(report => report.id !== reportId));
+      toast({
+        title: "Report Deleted",
+        description: "The report has been successfully deleted.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Generated': return 'bg-green-100 text-green-800';
@@ -127,7 +156,7 @@ const Reports = () => {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
+      <Sidebar onCreateReport={() => setIsCreateModalOpen(true)} />
       
       <main className="flex-1 overflow-auto">
         {/* Header */}
@@ -286,13 +315,26 @@ const Reports = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEdit(report.id)}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDownload(report.id, report.name)}
+                          >
                             <Download className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-600"
+                            onClick={() => handleDelete(report.id)}
+                          >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
