@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { BarChart3, FileText, Settings, Plus, Home, Database, Bell, HelpCircle, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
 import UserDropdown from './UserDropdown';
+import NotificationBell from './NotificationBell';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -92,6 +92,7 @@ const Sidebar = () => {
             </div>
           </div>
           <div className="flex items-center space-x-1">
+            <NotificationBell />
             <ThemeToggle />
             <UserDropdown />
           </div>

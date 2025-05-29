@@ -2,245 +2,251 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, DollarSign, ShoppingCart, Users, ArrowRight, Plus, BarChart3, LineChart as LineChartIcon, PieChart as PieChartIcon } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  BarChart3, 
+  TrendingUp, 
+  Users, 
+  DollarSign,
+  Plus,
+  Eye,
+  MessageSquare,
+  Brain
+} from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import Sidebar from '@/components/Sidebar';
 import CreateReportModal from '@/components/CreateReportModal';
+import AIPreview from '@/components/AIPreview';
+import CollaborationPanel from '@/components/CollaborationPanel';
+import ConsentModal from '@/components/ConsentModal';
+import AIInsightsDashboard from '@/components/AIInsightsDashboard';
+import AIFeedback from '@/components/AIFeedback';
 
-// Sample data for charts
-const salesData = [
-  { month: 'Jan', revenue: 12000, orders: 45 },
-  { month: 'Feb', revenue: 15000, orders: 52 },
-  { month: 'Mar', revenue: 18000, orders: 61 },
-  { month: 'Apr', revenue: 22000, orders: 73 },
-  { month: 'May', revenue: 25000, orders: 89 },
-  { month: 'Jun', revenue: 28000, orders: 95 },
+const revenueData = [
+  { month: 'Jan', revenue: 12000 },
+  { month: 'Feb', revenue: 14000 },
+  { month: 'Mar', revenue: 18000 },
+  { month: 'Apr', revenue: 22000 },
+  { month: 'May', revenue: 28000 },
+  { month: 'Jun', revenue: 35000 },
 ];
 
 const trafficData = [
-  { source: 'Organic Search', visitors: 3200, color: '#3b82f6' },
-  { source: 'Direct', visitors: 2100, color: '#10b981' },
-  { source: 'Social Media', visitors: 1800, color: '#f59e0b' },
-  { source: 'Email', visitors: 1200, color: '#ef4444' },
-  { source: 'Paid Search', visitors: 900, color: '#8b5cf6' },
+  { source: 'Organic', visitors: 4500 },
+  { source: 'Direct', visitors: 3200 },
+  { source: 'Social', visitors: 2800 },
+  { source: 'Paid', visitors: 1900 },
 ];
 
 const Index = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Simulate showing consent modal for new users
+  useState(() => {
+    const hasSeenConsent = localStorage.getItem('hasSeenConsent');
+    if (!hasSeenConsent) {
+      setTimeout(() => setIsConsentModalOpen(true), 2000);
+    }
+  });
+
+  const handleConsentModalClose = () => {
+    setIsConsentModalOpen(false);
+    localStorage.setItem('hasSeenConsent', 'true');
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       
       <main className="flex-1 overflow-auto">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-600">Welcome back! Here's what's happening with your business.</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-300">Welcome back! Here's your business overview.</p>
             </div>
             <Button 
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 mr-2" />
               Create Report
             </Button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-blue-100">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-blue-200" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">$128,450</div>
-                <p className="text-xs text-blue-200">
-                  <TrendingUp className="w-3 h-3 inline mr-1" />
-                  +12.5% from last month
-                </p>
-              </CardContent>
-            </Card>
+        <div className="p-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                AI Preview
+              </TabsTrigger>
+              <TabsTrigger value="insights" className="flex items-center gap-2">
+                <Brain className="w-4 h-4" />
+                AI Insights
+              </TabsTrigger>
+              <TabsTrigger value="collaboration" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Collaboration
+              </TabsTrigger>
+            </TabsList>
 
-            <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-green-100">Total Orders</CardTitle>
-                <ShoppingCart className="h-4 w-4 text-green-200" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">1,247</div>
-                <p className="text-xs text-green-200">
-                  <TrendingUp className="w-3 h-3 inline mr-1" />
-                  +8.2% from last month
-                </p>
-              </CardContent>
-            </Card>
+            <TabsContent value="overview" className="space-y-6">
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">$129,000</div>
+                    <p className="text-xs text-muted-foreground">
+                      +15% from last month
+                    </p>
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-purple-100">Active Customers</CardTitle>
-                <Users className="h-4 w-4 text-purple-200" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">2,847</div>
-                <p className="text-xs text-purple-200">
-                  <TrendingUp className="w-3 h-3 inline mr-1" />
-                  +15.3% from last month
-                </p>
-              </CardContent>
-            </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">2,350</div>
+                    <p className="text-xs text-muted-foreground">
+                      +8% from last month
+                    </p>
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-orange-100">Conversion Rate</CardTitle>
-                <BarChart3 className="h-4 w-4 text-orange-200" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">3.24%</div>
-                <p className="text-xs text-orange-200">
-                  <TrendingUp className="w-3 h-3 inline mr-1" />
-                  +0.4% from last month
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">3.4%</div>
+                    <p className="text-xs text-muted-foreground">
+                      +0.3% from last month
+                    </p>
+                  </CardContent>
+                </Card>
 
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <LineChartIcon className="w-5 h-5 text-blue-600" />
-                  Revenue Trend
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" stroke="#666" />
-                    <YAxis stroke="#666" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'white', 
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                      }} 
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      stroke="#3b82f6" 
-                      strokeWidth={3}
-                      dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Traffic Sources */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChartIcon className="w-5 h-5 text-green-600" />
-                  Traffic Sources
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={trafficData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      dataKey="visitors"
-                    >
-                      {trafficData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'white', 
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                      }} 
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="mt-4 space-y-2">
-                  {trafficData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="text-sm text-gray-600">{item.source}</span>
-                      </div>
-                      <span className="text-sm font-medium">{item.visitors.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Reports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { name: 'Sales Performance Q2', type: 'Sales Performance', source: 'Shopify', status: 'Generated', time: '2 hours ago' },
-                  { name: 'Cart Abandonment Analysis', type: 'Cart Abandonment', source: 'Google Analytics', status: 'Generated', time: '5 hours ago' },
-                  { name: 'Product Performance Review', type: 'Product Performance', source: 'Amazon', status: 'Pending', time: '1 day ago' },
-                ].map((report, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <BarChart3 className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">{report.name}</h4>
-                        <p className="text-sm text-gray-500">{report.type} • {report.source}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        report.status === 'Generated' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {report.status}
-                      </span>
-                      <p className="text-sm text-gray-500 mt-1">{report.time}</p>
-                    </div>
-                  </div>
-                ))}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Reports Generated</CardTitle>
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">47</div>
+                    <p className="text-xs text-muted-foreground">
+                      +12 this month
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Revenue Trend</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={revenueData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => [`$${value}`, 'Revenue']} />
+                        <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Traffic Sources</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={trafficData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="source" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="visitors" fill="#3b82f6" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="preview">
+              <AIPreview />
+            </TabsContent>
+
+            <TabsContent value="insights" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <AIInsightsDashboard />
+                </div>
+                <div>
+                  <AIFeedback />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="collaboration">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <CollaborationPanel />
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Recent Activity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="text-sm">
+                        <span className="font-medium">Sarah Wilson</span> commented on Amazon Q2 Report
+                        <span className="text-gray-500 ml-2">2 hours ago</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium">AI Assistant</span> suggested optimizations
+                        <span className="text-gray-500 ml-2">3 hours ago</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium">Mike Johnson</span> applied AI recommendation
+                        <span className="text-gray-500 ml-2">1 day ago</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
       <CreateReportModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
+      />
+
+      <ConsentModal 
+        isOpen={isConsentModalOpen} 
+        onClose={handleConsentModalClose} 
       />
     </div>
   );

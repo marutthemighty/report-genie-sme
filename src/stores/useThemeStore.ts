@@ -44,11 +44,6 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'theme-storage',
-      onRehydrate: (state) => {
-        if (state) {
-          state.updateEffectiveTheme();
-        }
-      },
     }
   )
 );
