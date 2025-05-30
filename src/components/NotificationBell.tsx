@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,33 +9,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const NotificationBell = () => {
   const navigate = useNavigate();
-  const [notifications] = useState([
-    {
-      id: '1',
-      message: 'Report Generated Successfully',
-      timestamp: '2 minutes ago',
-      unread: true
-    },
-    {
-      id: '2',
-      message: 'Shopify integration connected',
-      timestamp: '1 hour ago',
-      unread: true
-    },
-    {
-      id: '3',
-      message: 'Weekly report scheduled',
-      timestamp: '3 hours ago',
-      unread: false
-    }
-  ]);
-
-  const unreadCount = notifications.filter(n => n.unread).length;
+  const { notifications, unreadCount, markAsRead } = useNotifications();
 
   const handleViewAll = () => {
+    navigate('/notifications');
+  };
+
+  const handleNotificationClick = (notificationId: string) => {
+    markAsRead(notificationId);
     navigate('/notifications');
   };
 
@@ -60,14 +44,20 @@ const NotificationBell = () => {
           <h4 className="font-medium">Notifications</h4>
         </div>
         {notifications.slice(0, 3).map((notification) => (
-          <DropdownMenuItem key={notification.id} className="p-3 flex flex-col items-start cursor-pointer">
+          <DropdownMenuItem 
+            key={notification.id} 
+            className="p-3 flex flex-col items-start cursor-pointer"
+            onClick={() => handleNotificationClick(notification.id)}
+          >
             <div className="flex items-center gap-2 w-full">
-              {notification.unread && (
+              {!notification.read && (
                 <div className="w-2 h-2 bg-blue-500 rounded-full" />
               )}
-              <p className="text-sm flex-1">{notification.message}</p>
+              <p className="text-sm flex-1">{notification.title}</p>
             </div>
-            <span className="text-xs text-gray-500 mt-1">{notification.timestamp}</span>
+            <span className="text-xs text-gray-500 mt-1">
+              {new Date(notification.created_at).toLocaleString()}
+            </span>
           </DropdownMenuItem>
         ))}
         <div className="p-3 border-t">

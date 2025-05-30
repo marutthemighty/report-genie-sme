@@ -7,72 +7,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Bell, Check, Trash2, Filter, ArrowLeft } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import CreateReportModal from '@/components/CreateReportModal';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useReports } from '@/hooks/useReports';
 
 const Notifications = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
   const [filter, setFilter] = useState('all');
-  const [notifications, setNotifications] = useState([
-    {
-      id: '1',
-      title: 'Report Generated Successfully',
-      message: 'Your Q2 Shopify Sales Performance report has been generated and is ready for review. The report shows a 15% increase in revenue compared to Q1, with mobile traffic being the primary driver of growth.',
-      type: 'success',
-      timestamp: '2 minutes ago',
-      read: false,
-      fullContent: 'Your Q2 Shopify Sales Performance report has been generated successfully. Key findings include:\n\n• 15% revenue increase compared to Q1\n• Mobile traffic up 45%\n• Top-performing product: Wireless Headphones\n• Conversion rate improved to 3.8%\n• Recommended actions: Optimize mobile checkout flow and increase inventory for top products.'
-    },
-    {
-      id: '2',
-      title: 'Integration Connected',
-      message: 'Shopify integration has been successfully connected to your account. You can now sync your store data automatically.',
-      type: 'info',
-      timestamp: '1 hour ago',
-      read: false,
-      fullContent: 'Your Shopify integration has been successfully connected. You now have access to:\n\n• Real-time sales data\n• Product performance metrics\n• Customer analytics\n• Inventory tracking\n• Automated report generation\n\nData synchronization will occur every 15 minutes.'
-    },
-    {
-      id: '3',
-      title: 'Weekly Report Scheduled',
-      message: 'Your weekly analytics report has been scheduled for every Monday at 9:00 AM.',
-      type: 'info',
-      timestamp: '3 hours ago',
-      read: true,
-      fullContent: 'Weekly report automation has been set up successfully. You will receive comprehensive analytics reports every Monday at 9:00 AM covering:\n\n• Sales performance\n• Traffic analytics\n• Conversion rates\n• Top products\n• Customer insights\n\nYou can modify this schedule in Settings > Notifications.'
-    },
-    {
-      id: '4',
-      title: 'Data Sync Warning',
-      message: 'Unable to sync data from Google Analytics. Please check your API key.',
-      type: 'warning',
-      timestamp: '1 day ago',
-      read: true,
-      fullContent: 'There was an issue syncing data from your Google Analytics account. This may be due to:\n\n• Expired API credentials\n• Changed account permissions\n• API rate limits\n• Network connectivity issues\n\nPlease go to Integrations > Google Analytics to refresh your connection and API key.'
-    }
-  ]);
-
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
-    if (selectedNotification?.id === id) {
-      setSelectedNotification(null);
-    }
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
-  };
+  
+  const { 
+    notifications, 
+    loading, 
+    markAsRead, 
+    markAllAsRead, 
+    deleteNotification 
+  } = useNotifications();
+  
+  const { createReport } = useReports();
 
   const handleNotificationClick = (notification: any) => {
     markAsRead(notification.id);
     setSelectedNotification(notification);
+  };
+
+  const handleCreateReport = async (reportData: any) => {
+    try {
+      await createReport(reportData);
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error('Error creating report:', error);
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -93,6 +57,17 @@ const Notifications = () => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+        <Sidebar onCreateReport={() => setIsCreateModalOpen(true)} />
+        <main className="flex-1 flex items-center justify-center">
+          <div>Loading notifications...</div>
+        </main>
+      </div>
+    );
+  }
+
   if (selectedNotification) {
     return (
       <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -107,7 +82,9 @@ const Notifications = () => {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedNotification.title}</h1>
-                <p className="text-gray-600 dark:text-gray-300">{selectedNotification.timestamp}</p>
+                <p className="text-gray-600 dark:text-gray-300">
+                  {new Date(selectedNotification.created_at).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
@@ -121,9 +98,9 @@ const Notifications = () => {
                   </Badge>
                 </div>
                 <div className="prose dark:prose-invert max-w-none">
-                  <pre className="whitespace-pre-wrap font-sans text-gray-700 dark:text-gray-300">
-                    {selectedNotification.fullContent}
-                  </pre>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    {selectedNotification.message}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -132,6 +109,7 @@ const Notifications = () => {
           <CreateReportModal 
             isOpen={isCreateModalOpen} 
             onClose={() => setIsCreateModalOpen(false)}
+            onSubmit={handleCreateReport}
           />
         </main>
       </div>
@@ -224,7 +202,7 @@ const Notifications = () => {
                           {notification.message}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {notification.timestamp}
+                          {new Date(notification.created_at).toLocaleString()}
                         </p>
                       </div>
                       <div className="flex gap-1 ml-4">
@@ -263,6 +241,7 @@ const Notifications = () => {
         <CreateReportModal 
           isOpen={isCreateModalOpen} 
           onClose={() => setIsCreateModalOpen(false)}
+          onSubmit={handleCreateReport}
         />
       </main>
     </div>

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import CreateReportModal from '@/components/CreateReportModal';
+import { useReports } from '@/hooks/useReports';
 
 const Reports = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,87 +37,33 @@ const Reports = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { toast } = useToast();
-
-  // Sample reports data with real-looking data
-  const [reports, setReports] = useState([
-    {
-      id: '1',
-      name: 'Q2 Shopify Sales Performance',
-      type: 'Sales Performance',
-      dataSource: 'Shopify',
-      status: 'Generated',
-      createdBy: 'John Doe',
-      createdAt: '2024-01-15',
-      aiScore: 92,
-      revenue: '$128,450',
-      growth: '+15.3%'
-    },
-    {
-      id: '2',
-      name: 'Google Analytics Traffic Analysis',
-      type: 'Traffic Analytics',
-      dataSource: 'Google Analytics',
-      status: 'Generated',
-      createdBy: 'Jane Smith',
-      createdAt: '2024-01-14',
-      aiScore: 87,
-      sessions: '45,230',
-      growth: '+8.7%'
-    },
-    {
-      id: '3',
-      name: 'Amazon Product Performance Review',
-      type: 'Product Performance',
-      dataSource: 'Amazon',
-      status: 'Pending',
-      createdBy: 'Mike Johnson',
-      createdAt: '2024-01-13',
-      aiScore: 0,
-      revenue: 'Processing...',
-      growth: 'N/A'
-    },
-    {
-      id: '4',
-      name: 'Cart Abandonment Analysis - WooCommerce',
-      type: 'Cart Abandonment',
-      dataSource: 'WooCommerce',
-      status: 'Generated',
-      createdBy: 'Sarah Wilson',
-      createdAt: '2024-01-12',
-      aiScore: 78,
-      recoverable: '$23,890',
-      growth: '+12.1%'
-    },
-    {
-      id: '5',
-      name: 'Etsy Customer Retention Study',
-      type: 'Customer Retention',
-      dataSource: 'Etsy',
-      status: 'Failed',
-      createdBy: 'Tom Brown',
-      createdAt: '2024-01-11',
-      aiScore: 0,
-      revenue: 'Error',
-      growth: 'N/A'
-    }
-  ]);
+  
+  const { reports, loading, createReport, deleteReport } = useReports();
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.dataSource.toLowerCase().includes(searchTerm.toLowerCase());
+                         report.report_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         report.data_source.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || report.status.toLowerCase() === statusFilter;
-    const matchesType = typeFilter === 'all' || report.type === typeFilter;
+    const matchesType = typeFilter === 'all' || report.report_type === typeFilter;
     
     return matchesSearch && matchesStatus && matchesType;
   });
+
+  const handleCreateReport = async (reportData: any) => {
+    try {
+      await createReport(reportData);
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error('Error creating report:', error);
+    }
+  };
 
   const handleEdit = (reportId: string) => {
     toast({
       title: "Edit Report",
       description: `Opening editor for report ${reportId}`,
     });
-    // Here you would navigate to the edit page or open an edit modal
   };
 
   const handleDownload = (reportId: string, reportName: string) => {
@@ -124,17 +71,11 @@ const Reports = () => {
       title: "Download Started",
       description: `Downloading ${reportName}...`,
     });
-    // Here you would trigger the actual download
   };
 
   const handleDelete = (reportId: string) => {
     if (confirm('Are you sure you want to delete this report?')) {
-      setReports(prev => prev.filter(report => report.id !== reportId));
-      toast({
-        title: "Report Deleted",
-        description: "The report has been successfully deleted.",
-        variant: "destructive",
-      });
+      deleteReport(reportId);
     }
   };
 
@@ -147,12 +88,16 @@ const Reports = () => {
     }
   };
 
-  const getAIScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
-    if (score > 0) return 'text-red-600';
-    return 'text-gray-400';
-  };
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+        <Sidebar onCreateReport={() => setIsCreateModalOpen(true)} />
+        <main className="flex-1 flex items-center justify-center">
+          <div>Loading reports...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -253,96 +198,92 @@ const Reports = () => {
               <CardTitle>Reports ({filteredReports.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="cursor-pointer">
-                      <div className="flex items-center gap-1">
-                        Name
-                        <ArrowUpDown className="w-4 h-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-1">
-                        <Database className="w-4 h-4" />
-                        Data Source
-                      </div>
-                    </TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        Created
-                      </div>
-                    </TableHead>
-                    <TableHead>Created By</TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-1">
-                        <TrendingUp className="w-4 h-4" />
-                        AI Score
-                      </div>
-                    </TableHead>
-                    <TableHead>Key Metric</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredReports.map((report) => (
-                    <TableRow key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <TableCell className="font-medium">{report.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{report.type}</Badge>
-                      </TableCell>
-                      <TableCell>{report.dataSource}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(report.status)}>
-                          {report.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{report.createdAt}</TableCell>
-                      <TableCell>{report.createdBy}</TableCell>
-                      <TableCell>
-                        <span className={`font-medium ${getAIScoreColor(report.aiScore)}`}>
-                          {report.aiScore > 0 ? `${report.aiScore}/100` : 'N/A'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">{report.revenue || report.sessions || report.recoverable}</div>
-                          <div className="text-gray-500">{report.growth}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
+              {filteredReports.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    No reports found
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    Get started by creating your first report.
+                  </p>
+                  <Button onClick={() => setIsCreateModalOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Report
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="cursor-pointer">
                         <div className="flex items-center gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleEdit(report.id)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDownload(report.id, report.name)}
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-red-600"
-                            onClick={() => handleDelete(report.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          Name
+                          <ArrowUpDown className="w-4 h-4" />
                         </div>
-                      </TableCell>
+                      </TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-1">
+                          <Database className="w-4 h-4" />
+                          Data Source
+                        </div>
+                      </TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          Created
+                        </div>
+                      </TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredReports.map((report) => (
+                      <TableRow key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <TableCell className="font-medium">{report.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{report.report_type}</Badge>
+                        </TableCell>
+                        <TableCell>{report.data_source}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(report.status)}>
+                            {report.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{new Date(report.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEdit(report.id)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDownload(report.id, report.name)}
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-600"
+                              onClick={() => handleDelete(report.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -351,6 +292,7 @@ const Reports = () => {
       <CreateReportModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
+        onSubmit={handleCreateReport}
       />
     </div>
   );

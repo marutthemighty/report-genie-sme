@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,25 +12,14 @@ import AIPreview from '@/components/AIPreview';
 import AIInsightsDashboard from '@/components/AIInsightsDashboard';
 import CollaborationPanel from '@/components/CollaborationPanel';
 import ConsentModal from '@/components/ConsentModal';
+import { useReports } from '@/hooks/useReports';
 
 const Index = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [timeRange, setTimeRange] = useState('6m');
-  const [reports, setReports] = useState([
-    {
-      id: '1',
-      name: 'Q2 Shopify Sales Performance',
-      type: 'Sales Performance',
-      dataSource: 'Shopify',
-      status: 'Generated',
-      createdBy: 'John Doe',
-      createdAt: '2024-01-15',
-      aiScore: 92,
-      revenue: '$128,450',
-      growth: '+15.3%'
-    }
-  ]);
+  
+  const { reports, createReport } = useReports();
 
   // Sample data that changes based on time range
   const getRevenueData = (range: string) => {
@@ -108,46 +96,39 @@ const Index = () => {
 
   const getTrafficData = (range: string) => {
     // Create different data patterns based on time range
-    const patterns = {
-      '7d': [
-        { source: 'Organic Search', visitors: 1200, percentage: 40 },
-        { source: 'Direct', visitors: 900, percentage: 30 },
-        { source: 'Social Media', visitors: 600, percentage: 20 },
-        { source: 'Referrals', visitors: 300, percentage: 10 },
-      ],
-      '30d': [
-        { source: 'Organic Search', visitors: 8500, percentage: 45 },
-        { source: 'Direct', visitors: 6800, percentage: 36 },
-        { source: 'Social Media', visitors: 2280, percentage: 12 },
-        { source: 'Referrals', visitors: 1330, percentage: 7 },
-      ],
-      '90d': [
-        { source: 'Organic Search', visitors: 25500, percentage: 48 },
-        { source: 'Direct', visitors: 18750, percentage: 35 },
-        { source: 'Social Media', visitors: 5350, percentage: 10 },
-        { source: 'Referrals', visitors: 3750, percentage: 7 },
-      ],
-      '6m': [
-        { source: 'Organic Search', visitors: 125000, percentage: 45 },
-        { source: 'Direct', visitors: 85000, percentage: 30 },
-        { source: 'Social Media', visitors: 42000, percentage: 15 },
-        { source: 'Referrals', visitors: 28000, percentage: 10 },
-      ],
-      '1y': [
-        { source: 'Organic Search', visitors: 350000, percentage: 47 },
-        { source: 'Direct', visitors: 224000, percentage: 30 },
-        { source: 'Social Media', visitors: 112000, percentage: 15 },
-        { source: 'Referrals', visitors: 59500, percentage: 8 },
-      ],
-      'all': [
-        { source: 'Organic Search', visitors: 850000, percentage: 46 },
-        { source: 'Direct', visitors: 595000, percentage: 32 },
-        { source: 'Social Media', visitors: 259000, percentage: 14 },
-        { source: 'Referrals', visitors: 148000, percentage: 8 },
-      ]
+    const basePatterns = {
+      '7d': { multiplier: 1, variance: 0.3 },
+      '30d': { multiplier: 7, variance: 0.2 },
+      '90d': { multiplier: 21, variance: 0.15 },
+      '6m': { multiplier: 90, variance: 0.1 },
+      '1y': { multiplier: 365, variance: 0.08 },
+      'all': { multiplier: 730, variance: 0.05 }
     };
 
-    return patterns[range as keyof typeof patterns] || patterns['6m'];
+    const pattern = basePatterns[range as keyof typeof basePatterns] || basePatterns['6m'];
+    
+    return [
+      { 
+        source: 'Organic Search', 
+        visitors: Math.round(1200 * pattern.multiplier * (1 + (Math.random() - 0.5) * pattern.variance)), 
+        percentage: 40 + Math.round((Math.random() - 0.5) * 10) 
+      },
+      { 
+        source: 'Direct', 
+        visitors: Math.round(900 * pattern.multiplier * (1 + (Math.random() - 0.5) * pattern.variance)), 
+        percentage: 30 + Math.round((Math.random() - 0.5) * 8) 
+      },
+      { 
+        source: 'Social Media', 
+        visitors: Math.round(600 * pattern.multiplier * (1 + (Math.random() - 0.5) * pattern.variance)), 
+        percentage: 20 + Math.round((Math.random() - 0.5) * 6) 
+      },
+      { 
+        source: 'Referrals', 
+        visitors: Math.round(300 * pattern.multiplier * (1 + (Math.random() - 0.5) * pattern.variance)), 
+        percentage: 10 + Math.round((Math.random() - 0.5) * 4) 
+      },
+    ];
   };
 
   const revenueData = getRevenueData(timeRange);
@@ -164,22 +145,13 @@ const Index = () => {
     { value: 'all', label: 'All time' }
   ];
 
-  const handleCreateReport = (reportData: any) => {
-    const newReport = {
-      id: Date.now().toString(),
-      name: reportData.name || `${reportData.dataSource} ${reportData.type}`,
-      type: reportData.type,
-      dataSource: reportData.dataSource,
-      status: 'Generated',
-      createdBy: 'John Doe',
-      createdAt: new Date().toISOString().split('T')[0],
-      aiScore: Math.floor(Math.random() * 30) + 70,
-      revenue: `$${Math.floor(Math.random() * 100000) + 50000}`,
-      growth: `+${(Math.random() * 20).toFixed(1)}%`
-    };
-    
-    setReports(prev => [newReport, ...prev]);
-    setIsCreateModalOpen(false);
+  const handleCreateReport = async (reportData: any) => {
+    try {
+      await createReport(reportData);
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error('Error creating report:', error);
+    }
   };
 
   return (
@@ -347,20 +319,27 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {reports.slice(0, 4).map((report, index) => (
+                    {reports.slice(0, 4).map((report) => (
                       <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
                           <Badge variant="default">
-                            Generated
+                            {report.status}
                           </Badge>
                           <div>
                             <p className="font-medium">Report generated: {report.name}</p>
-                            <p className="text-sm text-gray-500">{report.type}</p>
+                            <p className="text-sm text-gray-500">{report.report_type}</p>
                           </div>
                         </div>
-                        <span className="text-sm text-gray-500">{report.createdAt}</span>
+                        <span className="text-sm text-gray-500">
+                          {new Date(report.created_at).toLocaleDateString()}
+                        </span>
                       </div>
                     ))}
+                    {reports.length === 0 && (
+                      <div className="text-center text-gray-500 py-8">
+                        No reports created yet. Create your first report to see activity here.
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
