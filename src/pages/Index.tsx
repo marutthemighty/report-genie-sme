@@ -107,28 +107,47 @@ const Index = () => {
   };
 
   const getTrafficData = (range: string) => {
-    const baseData = [
-      { source: 'Organic Search', visitors: 12500, percentage: 45 },
-      { source: 'Direct', visitors: 8500, percentage: 30 },
-      { source: 'Social Media', visitors: 4200, percentage: 15 },
-      { source: 'Referrals', visitors: 2800, percentage: 10 },
-    ];
-
-    const multipliers: { [key: string]: number } = {
-      '7d': 0.05,
-      '30d': 0.2,
-      '90d': 0.6,
-      '6m': 1,
-      '1y': 1.8,
-      'all': 3
+    // Create different data patterns based on time range
+    const patterns = {
+      '7d': [
+        { source: 'Organic Search', visitors: 1200, percentage: 40 },
+        { source: 'Direct', visitors: 900, percentage: 30 },
+        { source: 'Social Media', visitors: 600, percentage: 20 },
+        { source: 'Referrals', visitors: 300, percentage: 10 },
+      ],
+      '30d': [
+        { source: 'Organic Search', visitors: 8500, percentage: 45 },
+        { source: 'Direct', visitors: 6800, percentage: 36 },
+        { source: 'Social Media', visitors: 2280, percentage: 12 },
+        { source: 'Referrals', visitors: 1330, percentage: 7 },
+      ],
+      '90d': [
+        { source: 'Organic Search', visitors: 25500, percentage: 48 },
+        { source: 'Direct', visitors: 18750, percentage: 35 },
+        { source: 'Social Media', visitors: 5350, percentage: 10 },
+        { source: 'Referrals', visitors: 3750, percentage: 7 },
+      ],
+      '6m': [
+        { source: 'Organic Search', visitors: 125000, percentage: 45 },
+        { source: 'Direct', visitors: 85000, percentage: 30 },
+        { source: 'Social Media', visitors: 42000, percentage: 15 },
+        { source: 'Referrals', visitors: 28000, percentage: 10 },
+      ],
+      '1y': [
+        { source: 'Organic Search', visitors: 350000, percentage: 47 },
+        { source: 'Direct', visitors: 224000, percentage: 30 },
+        { source: 'Social Media', visitors: 112000, percentage: 15 },
+        { source: 'Referrals', visitors: 59500, percentage: 8 },
+      ],
+      'all': [
+        { source: 'Organic Search', visitors: 850000, percentage: 46 },
+        { source: 'Direct', visitors: 595000, percentage: 32 },
+        { source: 'Social Media', visitors: 259000, percentage: 14 },
+        { source: 'Referrals', visitors: 148000, percentage: 8 },
+      ]
     };
 
-    const multiplier = multipliers[range] || 1;
-    
-    return baseData.map(item => ({
-      ...item,
-      visitors: Math.round(item.visitors * multiplier)
-    }));
+    return patterns[range as keyof typeof patterns] || patterns['6m'];
   };
 
   const revenueData = getRevenueData(timeRange);

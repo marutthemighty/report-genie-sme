@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -13,9 +12,10 @@ import { ArrowRight, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
 interface CreateReportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSubmit?: (reportData: any) => void;
 }
 
-const CreateReportModal = ({ isOpen, onClose }: CreateReportModalProps) => {
+const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps) => {
   const [reportName, setReportName] = useState('');
   const [dataSource, setDataSource] = useState('');
   const [reportType, setReportType] = useState('');
@@ -47,17 +47,23 @@ const CreateReportModal = ({ isOpen, onClose }: CreateReportModalProps) => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    setIsLoading(false);
-    onClose();
-    
-    console.log('Creating report:', {
-      reportName,
+    const reportData = {
+      name: reportName,
       dataSource,
-      reportType,
+      type: reportType,
       dateRange,
       customStartDate,
       customEndDate
-    });
+    };
+
+    if (onSubmit) {
+      onSubmit(reportData);
+    }
+    
+    setIsLoading(false);
+    onClose();
+    
+    console.log('Creating report:', reportData);
   };
 
   const isFormValid = reportName && dataSource && reportType && dateRange;

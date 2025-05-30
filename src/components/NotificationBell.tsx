@@ -9,12 +9,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
 
 const NotificationBell = () => {
+  const navigate = useNavigate();
   const [notifications] = useState([
     {
       id: '1',
-      message: 'Amazon report generated successfully',
+      message: 'Report Generated Successfully',
       timestamp: '2 minutes ago',
       unread: true
     },
@@ -33,6 +35,10 @@ const NotificationBell = () => {
   ]);
 
   const unreadCount = notifications.filter(n => n.unread).length;
+
+  const handleViewAll = () => {
+    navigate('/notifications');
+  };
 
   return (
     <DropdownMenu>
@@ -53,7 +59,7 @@ const NotificationBell = () => {
         <div className="p-3 border-b">
           <h4 className="font-medium">Notifications</h4>
         </div>
-        {notifications.map((notification) => (
+        {notifications.slice(0, 3).map((notification) => (
           <DropdownMenuItem key={notification.id} className="p-3 flex flex-col items-start cursor-pointer">
             <div className="flex items-center gap-2 w-full">
               {notification.unread && (
@@ -65,7 +71,7 @@ const NotificationBell = () => {
           </DropdownMenuItem>
         ))}
         <div className="p-3 border-t">
-          <Button variant="outline" size="sm" className="w-full">
+          <Button variant="outline" size="sm" className="w-full" onClick={handleViewAll}>
             View All
           </Button>
         </div>

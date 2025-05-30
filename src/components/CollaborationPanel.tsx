@@ -41,6 +41,53 @@ const CollaborationPanel = () => {
     }
   ]);
 
+  const generateAIResponse = (userMessage: string) => {
+    const responses = [
+      {
+        trigger: ['yes', 'proceed', 'go ahead', 'sure', 'okay', 'ok'],
+        response: 'Perfect! I\'ll generate a detailed conversion funnel report analyzing each step from product page to purchase completion. This will include drop-off rates, user behavior patterns, and specific optimization recommendations. Expected completion time: 2-3 minutes.'
+      },
+      {
+        trigger: ['no', 'not now', 'later', 'cancel'],
+        response: 'No problem! I\'m here whenever you need assistance. Feel free to ask about any other analytics topics or data insights you\'d like me to help with.'
+      },
+      {
+        trigger: ['traffic', 'visitors', 'seo'],
+        response: 'I can analyze your traffic patterns and SEO performance. Would you like me to create a comprehensive traffic analysis report showing your top-performing channels, keyword rankings, and growth opportunities?'
+      },
+      {
+        trigger: ['sales', 'revenue', 'products'],
+        response: 'I notice your sales data shows promising trends. I can create a detailed product performance analysis including bestsellers, seasonal patterns, and revenue optimization strategies. Should I proceed with this analysis?'
+      },
+      {
+        trigger: ['help', 'what can you do', 'capabilities'],
+        response: 'I can help you with: 1) Creating detailed analytics reports, 2) Identifying trends and anomalies, 3) Providing actionable recommendations, 4) Forecasting future performance, 5) Optimizing conversion rates. What specific area would you like to explore?'
+      },
+      {
+        trigger: ['thank you', 'thanks', 'good job'],
+        response: 'You\'re welcome! I\'m glad I could help. If you need any other insights or have questions about your data, just let me know!'
+      }
+    ];
+
+    const lowerMessage = userMessage.toLowerCase();
+    
+    for (const response of responses) {
+      if (response.trigger.some(trigger => lowerMessage.includes(trigger))) {
+        return response.response;
+      }
+    }
+
+    // Default responses for unmatched inputs
+    const defaultResponses = [
+      'That\'s an interesting point! Based on your current data trends, I\'d recommend focusing on customer retention strategies. Would you like me to analyze your customer lifecycle data?',
+      'I can provide more specific insights on that topic. Could you share which metrics or time period you\'d like me to focus on?',
+      'Great question! I can help analyze that data pattern. Would you like me to create a detailed report comparing performance across different segments?',
+      'I notice some interesting correlations in your data that might be relevant to this discussion. Should I dive deeper into the analytics?'
+    ];
+
+    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
@@ -53,19 +100,21 @@ const CollaborationPanel = () => {
     };
 
     setComments([...comments, comment]);
+    const currentMessage = newComment;
     setNewComment('');
 
-    // Simulate AI reply
+    // Generate AI reply based on user input
     setTimeout(() => {
+      const aiResponse = generateAIResponse(currentMessage);
       const aiReply: Comment = {
         id: (Date.now() + 1).toString(),
         user: 'AI Assistant',
-        content: 'I can help analyze this further. Would you like me to generate a detailed conversion funnel report?',
+        content: aiResponse,
         timestamp: 'Just now',
         isAI: true
       };
       setComments(prev => [...prev, aiReply]);
-    }, 2000);
+    }, 1500);
   };
 
   const handleEdit = (commentId: string, currentContent: string) => {

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { BarChart3, FileText, Settings, Plus, Home, Database, Bell, HelpCircle, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -36,13 +36,19 @@ const Sidebar = ({ onCreateReport }: SidebarProps) => {
     { id: 'help', label: 'Help & Support', icon: HelpCircle, path: '/help' },
   ];
 
+  const handleCreateReport = useCallback(() => {
+    if (onCreateReport) {
+      onCreateReport();
+    }
+  }, [onCreateReport]);
+
   const handleItemClick = (item: typeof menuItems[0]) => {
-    setActiveItem(item.id);
-    
     if (item.action === 'create') {
-      onCreateReport?.();
+      handleCreateReport();
       return;
     }
+    
+    setActiveItem(item.id);
     
     if (item.path) {
       navigate(item.path);
@@ -89,12 +95,10 @@ const Sidebar = ({ onCreateReport }: SidebarProps) => {
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <div className="flex items-center space-x-3">
-              <UserDropdown />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">John Doe</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">john@company.com</p>
-              </div>
+            <UserDropdown />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">John Doe</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">john@company.com</p>
             </div>
           </div>
           <div className="flex items-center space-x-1 ml-2">
