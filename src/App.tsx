@@ -20,7 +20,7 @@ import { useThemeStore } from "./stores/useThemeStore";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const { updateEffectiveTheme } = useThemeStore();
+  const updateEffectiveTheme = useThemeStore((state) => state.updateEffectiveTheme);
 
   useEffect(() => {
     // Initialize theme on app load

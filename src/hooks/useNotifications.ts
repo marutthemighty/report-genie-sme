@@ -14,6 +14,18 @@ export interface Notification {
   updated_at: string;
 }
 
+// Database response type (with string type instead of union)
+interface NotificationRow {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +40,16 @@ export const useNotifications = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setNotifications(data || []);
+      
+      // Transform database response to match our interface
+      const transformedData: Notification[] = (data || []).map((row: NotificationRow) => ({
+        ...row,
+        type: ['success', 'info', 'warning', 'error'].includes(row.type) 
+          ? row.type as 'success' | 'info' | 'warning' | 'error'
+          : 'info'
+      }));
+      
+      setNotifications(transformedData);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -103,8 +124,16 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      setNotifications(prev => [data, ...prev]);
-      return data;
+      // Transform the response
+      const transformedData: Notification = {
+        ...data,
+        type: ['success', 'info', 'warning', 'error'].includes(data.type) 
+          ? data.type as 'success' | 'info' | 'warning' | 'error'
+          : 'info'
+      };
+
+      setNotifications(prev => [transformedData, ...prev]);
+      return transformedData;
     } catch (error) {
       console.error('Error creating notification:', error);
       throw error;
