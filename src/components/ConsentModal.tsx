@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Shield, MapPin } from 'lucide-react';
+import { useConsent } from '@/hooks/useConsent';
 
 interface ConsentModalProps {
   isOpen: boolean;
@@ -11,19 +12,25 @@ interface ConsentModalProps {
 }
 
 const ConsentModal = ({ isOpen, onClose }: ConsentModalProps) => {
-  const [consents, setConsents] = useState({
-    analytics: false,
-    storage: false,
-    marketing: false
-  });
+  const { consents, saveConsents } = useConsent();
+  const [tempConsents, setTempConsents] = useState(consents);
 
-  const handleConsentChange = (type: keyof typeof consents, checked: boolean) => {
-    setConsents(prev => ({ ...prev, [type]: checked }));
+  const handleConsentChange = (type: keyof typeof tempConsents, checked: boolean) => {
+    setTempConsents(prev => ({ ...prev, [type]: checked }));
   };
 
-  const handleSave = () => {
-    // Here you would typically send the consent data to your backend
-    console.log('Saving consents:', consents);
+  const handleSave = async () => {
+    await saveConsents(tempConsents);
+    onClose();
+  };
+
+  const handleDeclineAll = async () => {
+    const declinedConsents = {
+      analytics: false,
+      storage: false,
+      marketing: false
+    };
+    await saveConsents(declinedConsents);
     onClose();
   };
 
@@ -43,14 +50,14 @@ const ConsentModal = ({ isOpen, onClose }: ConsentModalProps) => {
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
             <MapPin className="w-4 h-4" />
-            <span>Detected location: California, USA (CCPA applies)</span>
+            <span>GDPR/CCPA compliance notice</span>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-start space-x-3">
               <Checkbox
                 id="analytics"
-                checked={consents.analytics}
+                checked={tempConsents.analytics}
                 onCheckedChange={(checked) => handleConsentChange('analytics', checked as boolean)}
               />
               <div className="space-y-1">
@@ -66,7 +73,7 @@ const ConsentModal = ({ isOpen, onClose }: ConsentModalProps) => {
             <div className="flex items-start space-x-3">
               <Checkbox
                 id="storage"
-                checked={consents.storage}
+                checked={tempConsents.storage}
                 onCheckedChange={(checked) => handleConsentChange('storage', checked as boolean)}
               />
               <div className="space-y-1">
@@ -82,7 +89,7 @@ const ConsentModal = ({ isOpen, onClose }: ConsentModalProps) => {
             <div className="flex items-start space-x-3">
               <Checkbox
                 id="marketing"
-                checked={consents.marketing}
+                checked={tempConsents.marketing}
                 onCheckedChange={(checked) => handleConsentChange('marketing', checked as boolean)}
               />
               <div className="space-y-1">
@@ -97,7 +104,7 @@ const ConsentModal = ({ isOpen, onClose }: ConsentModalProps) => {
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+            <Button variant="outline" onClick={handleDeclineAll} className="flex-1">
               Decline All
             </Button>
             <Button onClick={handleSave} className="flex-1">

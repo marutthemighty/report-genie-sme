@@ -588,6 +588,36 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          company: string | null
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       recommendations: {
         Row: {
           created_at: string | null
@@ -713,6 +743,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_consents: {
+        Row: {
+          consent_type: string
+          created_at: string | null
+          granted: boolean
+          granted_at: string | null
+          id: string
+          ip_address: unknown | null
+          updated_at: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          consent_type: string
+          created_at?: string | null
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          updated_at?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          consent_type?: string
+          created_at?: string | null
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          updated_at?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_settings: {
         Row: {

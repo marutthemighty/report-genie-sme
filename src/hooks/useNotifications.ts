@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Notification {
@@ -14,7 +15,6 @@ export interface Notification {
   updated_at: string;
 }
 
-// Database response type (with string type instead of union)
 interface NotificationRow {
   id: string;
   user_id: string;
@@ -29,19 +29,22 @@ interface NotificationRow {
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const fetchNotifications = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('app_notifications')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Transform database response to match our interface
       const transformedData: Notification[] = (data || []).map((row: NotificationRow) => ({
         ...row,
         type: ['success', 'info', 'warning', 'error'].includes(row.type) 
@@ -77,10 +80,13 @@ export const useNotifications = () => {
   };
 
   const markAllAsRead = async () => {
+    if (!user) return;
+    
     try {
       const { error } = await supabase
         .from('app_notifications')
         .update({ read: true })
+        .eq('user_id', user.id)
         .eq('read', false);
 
       if (error) throw error;
@@ -112,19 +118,20 @@ export const useNotifications = () => {
   };
 
   const createNotification = async (notification: Omit<Notification, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    if (!user) throw new Error('User not authenticated');
+    
     try {
       const { data, error } = await supabase
         .from('app_notifications')
         .insert([{
           ...notification,
-          user_id: 'current-user-id' // This would be actual user ID in real app
+          user_id: user.id
         }])
         .select()
         .single();
 
       if (error) throw error;
 
-      // Transform the response
       const transformedData: Notification = {
         ...data,
         type: ['success', 'info', 'warning', 'error'].includes(data.type) 
@@ -142,7 +149,7 @@ export const useNotifications = () => {
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [user]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

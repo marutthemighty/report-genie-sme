@@ -1,9 +1,8 @@
 
 import { useState, useCallback } from 'react';
-import { BarChart3, FileText, Settings, Plus, Home, Database, Bell, HelpCircle, User, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { BarChart3, FileText, Settings, Plus, Home, Database, Bell, HelpCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import ThemeToggle from './ThemeToggle';
 import UserDropdown from './UserDropdown';
 import NotificationBell from './NotificationBell';
@@ -15,6 +14,7 @@ interface SidebarProps {
 const Sidebar = ({ onCreateReport }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [activeItem, setActiveItem] = useState(() => {
     const path = location.pathname;
     if (path === '/') return 'dashboard';
@@ -53,6 +53,13 @@ const Sidebar = ({ onCreateReport }: SidebarProps) => {
     if (item.path) {
       navigate(item.path);
     }
+  };
+
+  const getDisplayName = () => {
+    if (!user?.email) return 'User';
+    return user.user_metadata?.first_name && user.user_metadata?.last_name
+      ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+      : user.email.split('@')[0];
   };
 
   return (
@@ -97,8 +104,8 @@ const Sidebar = ({ onCreateReport }: SidebarProps) => {
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <UserDropdown />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">John Doe</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">john@company.com</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{getDisplayName()}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
             </div>
           </div>
           <div className="flex items-center space-x-1 ml-2">
