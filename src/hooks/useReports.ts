@@ -62,7 +62,7 @@ export const useReports = () => {
   };
 
   const createReport = async (reportData: any) => {
-    if (!user) {
+    if (!user?.id) {
       toast({
         title: "Authentication Required",
         description: "Please sign in to create reports.",
@@ -75,6 +75,12 @@ export const useReports = () => {
       console.log('Creating report with data:', reportData);
       console.log('User ID:', user.id);
       
+      // First, check if user exists in auth.users
+      const { data: authUser } = await supabase.auth.getUser();
+      if (!authUser.user) {
+        throw new Error('User session invalid. Please sign out and sign back in.');
+      }
+      
       // Simplified report payload with only required fields
       const reportPayload = {
         name: reportData.name || 'Untitled Report',
@@ -86,7 +92,7 @@ export const useReports = () => {
         generated_at: new Date().toISOString()
       };
 
-      console.log('Simplified report payload:', reportPayload);
+      console.log('Report payload:', reportPayload);
 
       const { data, error } = await supabase
         .from('reports')
@@ -96,6 +102,12 @@ export const useReports = () => {
 
       if (error) {
         console.error('Supabase error creating report:', error);
+        
+        // Check if it's a foreign key constraint error
+        if (error.message.includes('foreign key constraint')) {
+          throw new Error('User authentication error. Please sign out and sign back in.');
+        }
+        
         throw new Error(`Failed to create report: ${error.message}`);
       }
 

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,6 @@ const DataImportPanel = () => {
         description: `${selectedFile.name} has been processed and is ready for analysis.`,
       });
       
-      // Don't reset file, keep it for analysis
     } catch (error) {
       toast({
         title: "Upload Failed",
@@ -48,6 +48,46 @@ const DataImportPanel = () => {
     }
   };
 
+  const generateAnalysisResults = (analysisType: string, fileName: string) => {
+    const baseInsights = {
+      'Sales Analysis': [
+        `Revenue increased by ${Math.floor(Math.random() * 20) + 10}% compared to previous period`,
+        `Top performing product category: ${['Electronics', 'Clothing', 'Home & Garden', 'Sports'][Math.floor(Math.random() * 4)]}`,
+        `Average order value: $${(Math.random() * 50 + 30).toFixed(2)}`,
+        `Peak sales day: ${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][Math.floor(Math.random() * 7)]}`
+      ],
+      'Customer Insights': [
+        `Customer retention rate: ${Math.floor(Math.random() * 15) + 75}%`,
+        `New customer acquisition increased by ${Math.floor(Math.random() * 10) + 5}%`,
+        `Most active customer segment: ${['Premium', 'Standard', 'Basic'][Math.floor(Math.random() * 3)]} users`,
+        `Average customer lifetime value: $${(Math.random() * 500 + 200).toFixed(2)}`
+      ],
+      'Performance Trends': [
+        `Website conversion rate: ${(Math.random() * 2 + 2).toFixed(2)}%`,
+        `Mobile traffic accounts for ${Math.floor(Math.random() * 20) + 60}% of total visits`,
+        `Page load time improved by ${(Math.random() * 0.5 + 0.1).toFixed(1)}s`,
+        `Bounce rate decreased by ${Math.floor(Math.random() * 5) + 3}%`
+      ],
+      'Custom Analysis': [
+        `Data quality score: ${Math.floor(Math.random() * 10) + 85}%`,
+        `Key performance indicators trending ${['upward', 'stable', 'improving'][Math.floor(Math.random() * 3)]}`,
+        `Anomalies detected: ${Math.floor(Math.random() * 3)} data points require attention`,
+        `Forecast accuracy: ${Math.floor(Math.random() * 10) + 85}%`
+      ]
+    };
+
+    return {
+      type: analysisType,
+      summary: `${analysisType} completed for ${fileName}`,
+      insights: baseInsights[analysisType as keyof typeof baseInsights] || baseInsights['Custom Analysis'],
+      metrics: {
+        totalRecords: Math.floor(Math.random() * 10000) + 1000,
+        dataQuality: Math.floor(Math.random() * 20) + 80,
+        processingTime: `${Math.floor(Math.random() * 5) + 1}.${Math.floor(Math.random() * 9)}s`
+      }
+    };
+  };
+
   const handleAnalysis = async (analysisType: string) => {
     if (!selectedFile) return;
 
@@ -56,22 +96,8 @@ const DataImportPanel = () => {
       // Simulate analysis processing
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Generate mock analysis results
-      const mockResults = {
-        type: analysisType,
-        summary: `${analysisType} completed for ${selectedFile.name}`,
-        insights: [
-          "Revenue increased by 15% compared to previous period",
-          "Top performing product category: Electronics",
-          "Customer acquisition cost decreased by 8%",
-          "Mobile traffic accounts for 65% of total visits"
-        ],
-        metrics: {
-          totalRecords: Math.floor(Math.random() * 10000) + 1000,
-          dataQuality: Math.floor(Math.random() * 20) + 80,
-          processingTime: `${Math.floor(Math.random() * 5) + 1}.${Math.floor(Math.random() * 9)}s`
-        }
-      };
+      // Generate dynamic analysis results
+      const mockResults = generateAnalysisResults(analysisType, selectedFile.name);
 
       setAnalysisResults(mockResults);
       setAnalysisComplete(true);
