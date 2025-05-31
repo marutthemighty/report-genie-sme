@@ -20,22 +20,6 @@ export interface Report {
   generated_at: string;
 }
 
-interface ReportRow {
-  id: string;
-  name: string;
-  report_type: string;
-  data_source: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-  date_range: string;
-  ai_summary?: string;
-  ai_prediction?: string;
-  template_layout?: any;
-  generated_at: string;
-}
-
 export const useReports = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,61 +27,83 @@ export const useReports = () => {
   const { toast } = useToast();
 
   const fetchReports = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
+      console.log('Fetching reports for user:', user.id);
+      
       const { data, error } = await supabase
         .from('reports')
         .select('*')
         .eq('created_by', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching reports:', error);
+        throw error;
+      }
       
-      const transformedData: Report[] = (data || []).map((row: ReportRow) => ({
-        ...row,
-      }));
-      
-      setReports(transformedData);
+      console.log('Fetched reports:', data);
+      setReports(data || []);
     } catch (error) {
       console.error('Error fetching reports:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch reports. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const createReport = async (reportData: any) => {
-    if (!user) throw new Error('User not authenticated');
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
     
     try {
+      console.log('Creating report with data:', reportData);
+      console.log('User ID:', user.id);
+      
+      const reportPayload = {
+        name: reportData.name,
+        report_type: reportData.type,
+        data_source: reportData.dataSource,
+        date_range: reportData.dateRange,
+        status: 'Generated',
+        created_by: user.id,
+        generated_at: new Date().toISOString(),
+        ai_summary: `AI-generated summary for ${reportData.name}: This report analyzes ${reportData.type.toLowerCase()} data from ${reportData.dataSource} over the ${reportData.dateRange.toLowerCase()} period.`,
+        ai_prediction: 'Based on current trends, we predict continued growth in the coming months with opportunities for optimization in key performance areas.'
+      };
+
+      console.log('Report payload:', reportPayload);
+
       const { data, error } = await supabase
         .from('reports')
-        .insert([{
-          name: reportData.name,
-          report_type: reportData.type,
-          data_source: reportData.dataSource,
-          date_range: reportData.dateRange,
-          status: 'Generated',
-          created_by: user.id,
-          generated_at: new Date().toISOString(),
-          ai_summary: `AI-generated summary for ${reportData.name}`,
-          ai_prediction: 'Based on current trends, we predict continued growth.'
-        }])
+        .insert([reportPayload])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error creating report:', error);
+        throw error;
+      }
 
-      const transformedData: Report = { ...data };
-      setReports(prev => [transformedData, ...prev]);
+      console.log('Report created successfully:', data);
+      setReports(prev => [data, ...prev]);
       
       toast({
         title: "Report Created",
         description: `${reportData.name} has been generated successfully.`,
       });
       
-      return transformedData;
+      return data;
     } catch (error) {
       console.error('Error creating report:', error);
       toast({
@@ -135,7 +141,12 @@ export const useReports = () => {
   };
 
   useEffect(() => {
-    fetchReports();
+    if (user) {
+      fetchReports();
+    } else {
+      setReports([]);
+      setLoading(false);
+    }
   }, [user]);
 
   return {

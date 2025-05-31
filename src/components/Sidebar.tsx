@@ -37,12 +37,20 @@ const Sidebar = ({ onCreateReport }: SidebarProps) => {
   ];
 
   const handleCreateReport = useCallback(() => {
+    console.log('Create Report clicked from Sidebar');
     if (onCreateReport) {
+      console.log('Calling onCreateReport callback');
       onCreateReport();
+    } else {
+      console.log('No onCreateReport callback, navigating to dashboard');
+      // If no callback provided, navigate to dashboard and trigger creation there
+      navigate('/', { state: { openCreateModal: true } });
     }
-  }, [onCreateReport]);
+  }, [onCreateReport, navigate]);
 
   const handleItemClick = (item: typeof menuItems[0]) => {
+    console.log('Menu item clicked:', item.id);
+    
     if (item.action === 'create') {
       handleCreateReport();
       return;

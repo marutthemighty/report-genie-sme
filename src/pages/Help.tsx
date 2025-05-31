@@ -1,49 +1,118 @@
 
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { 
-  HelpCircle, 
-  Search, 
+  BookOpen, 
+  Video, 
+  Code, 
   MessageCircle, 
+  Search, 
   Mail, 
-  Phone, 
-  BookOpen,
-  Video,
-  FileText
+  Phone,
+  ExternalLink,
+  FileText,
+  Users,
+  Zap
 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const Help = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [contactForm, setContactForm] = useState({
+  const [supportForm, setSupportForm] = useState({
     subject: '',
-    message: ''
+    message: '',
+    email: ''
   });
+  const { toast } = useToast();
+
+  const handleSupportSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Support Request Sent",
+      description: "We'll get back to you within 24 hours.",
+    });
+    setSupportForm({ subject: '', message: '', email: '' });
+  };
+
+  const quickActions = [
+    {
+      title: 'Documentation',
+      description: 'Comprehensive guides and API references',
+      icon: BookOpen,
+      color: 'bg-blue-50 text-blue-600 border-blue-200',
+      action: () => window.open('https://docs.reportai.com', '_blank')
+    },
+    {
+      title: 'Video Tutorials',
+      description: 'Step-by-step video guides',
+      icon: Video,
+      color: 'bg-green-50 text-green-600 border-green-200',
+      action: () => window.open('https://tutorials.reportai.com', '_blank')
+    },
+    {
+      title: 'API Reference',
+      description: 'Technical documentation for developers',
+      icon: Code,
+      color: 'bg-purple-50 text-purple-600 border-purple-200',
+      action: () => window.open('https://api.reportai.com/docs', '_blank')
+    },
+    {
+      title: 'Community Forum',
+      description: 'Connect with other users and get help',
+      icon: MessageCircle,
+      color: 'bg-orange-50 text-orange-600 border-orange-200',
+      action: () => window.open('https://community.reportai.com', '_blank')
+    }
+  ];
 
   const faqs = [
     {
-      question: "How do I connect my data sources?",
-      answer: "You can connect data sources by going to Settings > Integrations and entering your API keys for platforms like Shopify, Google Analytics, or Amazon."
+      question: 'How do I create my first report?',
+      answer: 'Click the "Create Report" button in the sidebar or dashboard, select your data source, choose a report type, and configure your settings. Our AI will generate insights automatically.'
     },
     {
-      question: "How long does it take to generate a report?",
-      answer: "Report generation typically takes 2-5 minutes depending on the amount of data and complexity of the analysis required."
+      question: 'What data sources are supported?',
+      answer: 'We support major e-commerce platforms like Shopify, WooCommerce, analytics tools like Google Analytics, and social media platforms like Facebook and Instagram.'
     },
     {
-      question: "Can I export reports in different formats?",
-      answer: "Yes, you can export reports as PDF, CSV, or Google Slides. Configure your export preferences in Settings > Export Formats."
+      question: 'How accurate are the AI predictions?',
+      answer: 'Our AI models are trained on vast datasets and typically achieve 85-95% accuracy. Accuracy improves over time as the system learns from your specific data patterns.'
     },
     {
-      question: "How accurate are the AI insights?",
-      answer: "Our AI insights are based on statistical analysis of your data with 85-95% accuracy. We continuously improve our algorithms based on user feedback."
+      question: 'Can I export my reports?',
+      answer: 'Yes, you can export reports in multiple formats including PDF, Excel, and CSV. Premium users also get access to automated report scheduling.'
     },
     {
-      question: "Is my data secure?",
-      answer: "Yes, we use enterprise-grade encryption and comply with GDPR and CCPA regulations. Your data is never shared with third parties."
+      question: 'Is my data secure?',
+      answer: 'Absolutely. We use enterprise-grade encryption, comply with GDPR and CCPA regulations, and never share your data with third parties.'
+    }
+  ];
+
+  const contactOptions = [
+    {
+      title: 'Email Support',
+      description: 'Get help via email within 24 hours',
+      icon: Mail,
+      contact: 'support@reportai.com',
+      action: () => window.location.href = 'mailto:support@reportai.com'
+    },
+    {
+      title: 'Phone Support',
+      description: 'Call us for immediate assistance',
+      icon: Phone,
+      contact: '+1 (555) 123-4567',
+      action: () => window.location.href = 'tel:+15551234567'
+    },
+    {
+      title: 'Live Chat',
+      description: 'Chat with our support team',
+      icon: MessageCircle,
+      contact: 'Available 9 AM - 6 PM EST',
+      action: () => toast({ title: "Live Chat", description: "Live chat will be available soon!" })
     }
   ];
 
@@ -51,13 +120,6 @@ const Help = () => {
     faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
     faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleContactSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Contact form submitted:', contactForm);
-    // Here you would send the contact form to your backend
-    setContactForm({ subject: '', message: '' });
-  };
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -67,134 +129,164 @@ const Help = () => {
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex items-center gap-2">
-            <HelpCircle className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+            <Users className="w-6 h-6 text-gray-600 dark:text-gray-300" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Help & Support</h1>
-              <p className="text-gray-600 dark:text-gray-300">Get help and find answers to your questions</p>
+              <p className="text-gray-600 dark:text-gray-300">Find answers, get help, and learn how to use ReportAI</p>
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Quick Actions */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Documentation
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <Video className="w-4 h-4 mr-2" />
-                    Video Tutorials
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <FileText className="w-4 h-4 mr-2" />
-                    API Reference
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Community Forum
-                  </Button>
-                </CardContent>
-              </Card>
+        <div className="p-6 space-y-8">
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {quickActions.map((action, index) => {
+                  const Icon = action.icon;
+                  return (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      className={`h-auto p-4 flex flex-col items-center gap-3 ${action.color}`}
+                      onClick={action.action}
+                    >
+                      <Icon className="w-8 h-8" />
+                      <div className="text-center">
+                        <div className="font-medium">{action.title}</div>
+                        <div className="text-xs opacity-70">{action.description}</div>
+                      </div>
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
-              {/* Contact Support */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>Contact Support</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 border rounded-lg">
-                    <Mail className="w-5 h-5 text-gray-500" />
-                    <div>
-                      <p className="font-medium">Email Support</p>
-                      <p className="text-sm text-gray-500">support@reportai.com</p>
+          {/* Search and FAQs */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Frequently Asked Questions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search FAQs..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {filteredFaqs.map((faq, index) => (
+                    <div key={index} className="border-b pb-4">
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                        {faq.question}
+                      </h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        {faq.answer}
+                      </p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 border rounded-lg">
-                    <Phone className="w-5 h-5 text-gray-500" />
-                    <div>
-                      <p className="font-medium">Phone Support</p>
-                      <p className="text-sm text-gray-500">+1 (555) 123-4567</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* FAQ and Contact Form */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* FAQ Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Frequently Asked Questions</CardTitle>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            {/* Contact Support */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5" />
+                  Contact Support
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
+                  {contactOptions.map((option, index) => {
+                    const Icon = option.icon;
+                    return (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        className="flex items-center justify-between p-4 h-auto"
+                        onClick={option.action}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-5 h-5" />
+                          <div className="text-left">
+                            <div className="font-medium">{option.title}</div>
+                            <div className="text-xs text-gray-500">{option.description}</div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600">{option.contact}</div>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Support Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Submit Support Request
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSupportSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Email</label>
                     <Input
-                      placeholder="Search FAQs..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={supportForm.email}
+                      onChange={(e) => setSupportForm({ ...supportForm, email: e.target.value })}
+                      required
                     />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <Accordion type="single" collapsible>
-                    {filteredFaqs.map((faq, index) => (
-                      <AccordionItem key={index} value={`item-${index}`}>
-                        <AccordionTrigger>{faq.question}</AccordionTrigger>
-                        <AccordionContent>{faq.answer}</AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                  {filteredFaqs.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">
-                      No FAQs found matching your search.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Contact Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Send us a message</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleContactSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Subject</label>
-                      <Input
-                        value={contactForm.subject}
-                        onChange={(e) => setContactForm(prev => ({ ...prev, subject: e.target.value }))}
-                        placeholder="What can we help you with?"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Message</label>
-                      <Textarea
-                        value={contactForm.message}
-                        onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
-                        placeholder="Describe your issue or question in detail..."
-                        rows={5}
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Send Message
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Subject</label>
+                    <Input
+                      placeholder="Brief description of your issue"
+                      value={supportForm.subject}
+                      onChange={(e) => setSupportForm({ ...supportForm, subject: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Message</label>
+                  <Textarea
+                    placeholder="Please describe your issue in detail..."
+                    rows={4}
+                    value={supportForm.message}
+                    onChange={(e) => setSupportForm({ ...supportForm, message: e.target.value })}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                  Send Support Request
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
