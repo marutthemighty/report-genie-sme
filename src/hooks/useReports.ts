@@ -63,6 +63,11 @@ export const useReports = () => {
 
   const createReport = async (reportData: any) => {
     if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to create reports.",
+        variant: "destructive"
+      });
       throw new Error('User not authenticated');
     }
     
@@ -74,11 +79,11 @@ export const useReports = () => {
         name: reportData.name,
         report_type: reportData.type,
         data_source: reportData.dataSource,
-        date_range: reportData.dateRange,
+        date_range: reportData.dateRange || 'Last 30 Days',
         status: 'Generated',
         created_by: user.id,
         generated_at: new Date().toISOString(),
-        ai_summary: `AI-generated summary for ${reportData.name}: This report analyzes ${reportData.type.toLowerCase()} data from ${reportData.dataSource} over the ${reportData.dateRange.toLowerCase()} period.`,
+        ai_summary: `AI-generated summary for ${reportData.name}: This report analyzes ${reportData.type?.toLowerCase() || 'business'} data from ${reportData.dataSource} over the ${reportData.dateRange?.toLowerCase() || 'last 30 days'} period.`,
         ai_prediction: 'Based on current trends, we predict continued growth in the coming months with opportunities for optimization in key performance areas.'
       };
 
@@ -92,7 +97,25 @@ export const useReports = () => {
 
       if (error) {
         console.error('Supabase error creating report:', error);
-        throw error;
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        
+        // Handle specific error cases
+        if (error.code === '23505') {
+          throw new Error('A report with this name already exists. Please choose a different name.');
+        } else if (error.code === '23503') {
+          throw new Error('User authentication error. Please sign out and sign back in.');
+        } else {
+          throw new Error(`Database error: ${error.message}`);
+        }
+      }
+
+      if (!data) {
+        throw new Error('No data returned from report creation');
       }
 
       console.log('Report created successfully:', data);
@@ -104,11 +127,14 @@ export const useReports = () => {
       });
       
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating report:', error);
+      
+      const errorMessage = error.message || 'An unexpected error occurred while creating the report.';
+      
       toast({
-        title: "Error",
-        description: "Failed to create report. Please try again.",
+        title: "Error Creating Report",
+        description: errorMessage,
         variant: "destructive"
       });
       throw error;

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MessageSquare, Send, Bot, Edit, Trash2, Check, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Comment {
   id: string;
@@ -19,6 +20,8 @@ const CollaborationPanel = () => {
   const [newComment, setNewComment] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   const [comments, setComments] = useState<Comment[]>([
     {
       id: '1',
@@ -32,65 +35,38 @@ const CollaborationPanel = () => {
       content: 'Based on the data, I recommend implementing exit-intent popups and simplifying the checkout flow to reduce cart abandonment by 15-20%.',
       timestamp: '1 hour ago',
       isAI: true
-    },
-    {
-      id: '3',
-      user: 'Mike Johnson',
-      content: 'Great insights! Let\'s implement the exit-intent strategy.',
-      timestamp: '45 minutes ago'
     }
   ]);
 
-  const generateAIResponse = (userMessage: string) => {
-    const responses = [
-      {
-        trigger: ['yes', 'proceed', 'go ahead', 'sure', 'okay', 'ok'],
-        response: 'Perfect! I\'ll generate a detailed conversion funnel report analyzing each step from product page to purchase completion. This will include drop-off rates, user behavior patterns, and specific optimization recommendations. Expected completion time: 2-3 minutes.'
-      },
-      {
-        trigger: ['no', 'not now', 'later', 'cancel'],
-        response: 'No problem! I\'m here whenever you need assistance. Feel free to ask about any other analytics topics or data insights you\'d like me to help with.'
-      },
-      {
-        trigger: ['traffic', 'visitors', 'seo'],
-        response: 'I can analyze your traffic patterns and SEO performance. Would you like me to create a comprehensive traffic analysis report showing your top-performing channels, keyword rankings, and growth opportunities?'
-      },
-      {
-        trigger: ['sales', 'revenue', 'products'],
-        response: 'I notice your sales data shows promising trends. I can create a detailed product performance analysis including bestsellers, seasonal patterns, and revenue optimization strategies. Should I proceed with this analysis?'
-      },
-      {
-        trigger: ['help', 'what can you do', 'capabilities'],
-        response: 'I can help you with: 1) Creating detailed analytics reports, 2) Identifying trends and anomalies, 3) Providing actionable recommendations, 4) Forecasting future performance, 5) Optimizing conversion rates. What specific area would you like to explore?'
-      },
-      {
-        trigger: ['thank you', 'thanks', 'good job'],
-        response: 'You\'re welcome! I\'m glad I could help. If you need any other insights or have questions about your data, just let me know!'
-      }
-    ];
+  const generateAIResponse = async (userMessage: string) => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: { 
+          message: userMessage,
+          context: 'User is analyzing their dashboard data and looking for insights'
+        }
+      });
 
-    const lowerMessage = userMessage.toLowerCase();
-    
-    for (const response of responses) {
-      if (response.trigger.some(trigger => lowerMessage.includes(trigger))) {
-        return response.response;
-      }
+      if (error) throw error;
+
+      return data.response || 'I apologize, but I was unable to generate a response at this time.';
+    } catch (error) {
+      console.error('Error calling AI chat:', error);
+      toast({
+        title: "AI Assistant Error",
+        description: "Unable to get AI response. Please try again.",
+        variant: "destructive"
+      });
+      return 'I apologize, but I encountered an error. Please try asking your question again.';
+    } finally {
+      setIsLoading(false);
     }
-
-    // Default responses for unmatched inputs
-    const defaultResponses = [
-      'That\'s an interesting point! Based on your current data trends, I\'d recommend focusing on customer retention strategies. Would you like me to analyze your customer lifecycle data?',
-      'I can provide more specific insights on that topic. Could you share which metrics or time period you\'d like me to focus on?',
-      'Great question! I can help analyze that data pattern. Would you like me to create a detailed report comparing performance across different segments?',
-      'I notice some interesting correlations in your data that might be relevant to this discussion. Should I dive deeper into the analytics?'
-    ];
-
-    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || isLoading) return;
 
     const comment: Comment = {
       id: Date.now().toString(),
@@ -99,22 +75,20 @@ const CollaborationPanel = () => {
       timestamp: 'Just now'
     };
 
-    setComments([...comments, comment]);
+    setComments(prev => [...prev, comment]);
     const currentMessage = newComment;
     setNewComment('');
 
-    // Generate AI reply based on user input
-    setTimeout(() => {
-      const aiResponse = generateAIResponse(currentMessage);
-      const aiReply: Comment = {
-        id: (Date.now() + 1).toString(),
-        user: 'AI Assistant',
-        content: aiResponse,
-        timestamp: 'Just now',
-        isAI: true
-      };
-      setComments(prev => [...prev, aiReply]);
-    }, 1500);
+    // Generate AI reply
+    const aiResponse = await generateAIResponse(currentMessage);
+    const aiReply: Comment = {
+      id: (Date.now() + 1).toString(),
+      user: 'AI Assistant',
+      content: aiResponse,
+      timestamp: 'Just now',
+      isAI: true
+    };
+    setComments(prev => [...prev, aiReply]);
   };
 
   const handleEdit = (commentId: string, currentContent: string) => {
@@ -152,7 +126,7 @@ const CollaborationPanel = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
-          Collaboration
+          AI Collaboration Chat
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -233,17 +207,39 @@ const CollaborationPanel = () => {
               </div>
             </div>
           ))}
+          {isLoading && (
+            <div className="flex gap-3">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-blue-100 text-blue-600">
+                  <Bot className="w-4 h-4" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium">AI Assistant</span>
+                  <Badge variant="secondary" className="text-xs">AI</Badge>
+                  <span className="text-xs text-gray-500">typing...</span>
+                </div>
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100"></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200"></div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Comment Input */}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input
-            placeholder="Add a comment..."
+            placeholder="Ask the AI assistant or add a comment..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             className="flex-1"
+            disabled={isLoading}
           />
-          <Button type="submit" size="sm">
+          <Button type="submit" size="sm" disabled={!newComment.trim() || isLoading}>
             <Send className="w-4 h-4" />
           </Button>
         </form>
