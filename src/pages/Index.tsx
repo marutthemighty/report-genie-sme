@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,48 +38,58 @@ const Index = () => {
     }
   };
 
-  // Enhanced data generation based on time range
+  // Enhanced data generation with real dates based on time range
   const getRevenueData = () => {
+    const now = new Date();
+    
     const dataMap = {
-      '7d': [
-        { name: 'Mon', revenue: 8500 },
-        { name: 'Tue', revenue: 9200 },
-        { name: 'Wed', revenue: 7800 },
-        { name: 'Thu', revenue: 10100 },
-        { name: 'Fri', revenue: 9500 },
-        { name: 'Sat', revenue: 11200 },
-        { name: 'Sun', revenue: 8900 },
-      ],
-      '30d': [
-        { name: 'Week 1', revenue: 45000 },
-        { name: 'Week 2', revenue: 52000 },
-        { name: 'Week 3', revenue: 48000 },
-        { name: 'Week 4', revenue: 61000 },
-      ],
-      '90d': [
-        { name: 'Month 1', revenue: 180000 },
-        { name: 'Month 2', revenue: 220000 },
-        { name: 'Month 3', revenue: 195000 },
-      ],
-      '6m': [
-        { name: 'Jan', revenue: 120000 },
-        { name: 'Feb', revenue: 140000 },
-        { name: 'Mar', revenue: 180000 },
-        { name: 'Apr', revenue: 220000 },
-        { name: 'May', revenue: 280000 },
-        { name: 'Jun', revenue: 350000 },
-      ],
-      '1y': [
-        { name: 'Q1', revenue: 450000 },
-        { name: 'Q2', revenue: 620000 },
-        { name: 'Q3', revenue: 580000 },
-        { name: 'Q4', revenue: 750000 },
-      ],
-      'all': [
-        { name: '2022', revenue: 2100000 },
-        { name: '2023', revenue: 2850000 },
-        { name: '2024', revenue: 3200000 },
-      ]
+      '7d': Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (6 - i));
+        return {
+          name: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          revenue: 8000 + Math.random() * 4000
+        };
+      }),
+      '30d': Array.from({ length: 4 }, (_, i) => {
+        const date = new Date(now);
+        date.setDate(date.getDate() - ((3 - i) * 7));
+        return {
+          name: `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+          revenue: 40000 + Math.random() * 20000
+        };
+      }),
+      '90d': Array.from({ length: 3 }, (_, i) => {
+        const date = new Date(now);
+        date.setMonth(date.getMonth() - (2 - i));
+        return {
+          name: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          revenue: 150000 + Math.random() * 70000
+        };
+      }),
+      '6m': Array.from({ length: 6 }, (_, i) => {
+        const date = new Date(now);
+        date.setMonth(date.getMonth() - (5 - i));
+        return {
+          name: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          revenue: 100000 + Math.random() * 150000
+        };
+      }),
+      '1y': Array.from({ length: 4 }, (_, i) => {
+        const date = new Date(now);
+        date.setMonth(date.getMonth() - ((3 - i) * 3));
+        return {
+          name: `Q${4 - (3 - i)} ${date.getFullYear()}`,
+          revenue: 400000 + Math.random() * 350000
+        };
+      }),
+      'all': Array.from({ length: 3 }, (_, i) => {
+        const year = now.getFullYear() - (2 - i);
+        return {
+          name: year.toString(),
+          revenue: 2000000 + Math.random() * 1200000
+        };
+      })
     };
     return dataMap[timeRange as keyof typeof dataMap] || dataMap['30d'];
   };
@@ -100,15 +109,42 @@ const Index = () => {
     return baseData;
   };
 
-  const conversionData = [
-    { name: 'Week 1', rate: 2.4 },
-    { name: 'Week 2', rate: 2.8 },
-    { name: 'Week 3', rate: 3.1 },
-    { name: 'Week 4', rate: 2.9 },
-  ];
+  const getConversionData = () => {
+    const now = new Date();
+    
+    if (timeRange === '7d') {
+      return Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (6 - i));
+        return {
+          name: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          rate: 2.0 + Math.random() * 1.5
+        };
+      });
+    } else if (timeRange === '30d') {
+      return Array.from({ length: 4 }, (_, i) => {
+        const date = new Date(now);
+        date.setDate(date.getDate() - ((3 - i) * 7));
+        return {
+          name: `Week ${i + 1}`,
+          rate: 2.4 + Math.random() * 0.7
+        };
+      });
+    } else {
+      return Array.from({ length: 4 }, (_, i) => {
+        const date = new Date(now);
+        date.setMonth(date.getMonth() - (3 - i));
+        return {
+          name: date.toLocaleDateString('en-US', { month: 'short' }),
+          rate: 2.4 + Math.random() * 0.7
+        };
+      });
+    }
+  };
 
   const revenueData = getRevenueData();
   const trafficData = getTrafficData();
+  const conversionData = getConversionData();
 
   const renderOverview = () => (
     <div className="space-y-6">

@@ -75,19 +75,18 @@ export const useReports = () => {
       console.log('Creating report with data:', reportData);
       console.log('User ID:', user.id);
       
+      // Simplified report payload with only required fields
       const reportPayload = {
-        name: reportData.name,
-        report_type: reportData.type,
-        data_source: reportData.dataSource,
+        name: reportData.name || 'Untitled Report',
+        report_type: reportData.type || 'General Analysis',
+        data_source: reportData.dataSource || 'Manual Input',
         date_range: reportData.dateRange || 'Last 30 Days',
         status: 'Generated',
         created_by: user.id,
-        generated_at: new Date().toISOString(),
-        ai_summary: `AI-generated summary for ${reportData.name}: This report analyzes ${reportData.type?.toLowerCase() || 'business'} data from ${reportData.dataSource} over the ${reportData.dateRange?.toLowerCase() || 'last 30 days'} period.`,
-        ai_prediction: 'Based on current trends, we predict continued growth in the coming months with opportunities for optimization in key performance areas.'
+        generated_at: new Date().toISOString()
       };
 
-      console.log('Report payload:', reportPayload);
+      console.log('Simplified report payload:', reportPayload);
 
       const { data, error } = await supabase
         .from('reports')
@@ -97,21 +96,7 @@ export const useReports = () => {
 
       if (error) {
         console.error('Supabase error creating report:', error);
-        console.error('Error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        
-        // Handle specific error cases
-        if (error.code === '23505') {
-          throw new Error('A report with this name already exists. Please choose a different name.');
-        } else if (error.code === '23503') {
-          throw new Error('User authentication error. Please sign out and sign back in.');
-        } else {
-          throw new Error(`Database error: ${error.message}`);
-        }
+        throw new Error(`Failed to create report: ${error.message}`);
       }
 
       if (!data) {
@@ -119,14 +104,34 @@ export const useReports = () => {
       }
 
       console.log('Report created successfully:', data);
-      setReports(prev => [data, ...prev]);
+      
+      // Update the report with AI content after creation
+      const updatedData = {
+        ...data,
+        ai_summary: `AI-generated summary for ${reportPayload.name}: This report analyzes ${reportPayload.report_type?.toLowerCase() || 'business'} data from ${reportPayload.data_source} over the ${reportPayload.date_range?.toLowerCase() || 'last 30 days'} period.`,
+        ai_prediction: 'Based on current trends, we predict continued growth in the coming months with opportunities for optimization in key performance areas.'
+      };
+
+      const { error: updateError } = await supabase
+        .from('reports')
+        .update({
+          ai_summary: updatedData.ai_summary,
+          ai_prediction: updatedData.ai_prediction
+        })
+        .eq('id', data.id);
+
+      if (updateError) {
+        console.warn('Failed to update AI content:', updateError);
+      }
+
+      setReports(prev => [updatedData, ...prev]);
       
       toast({
         title: "Report Created",
-        description: `${reportData.name} has been generated successfully.`,
+        description: `${reportPayload.name} has been generated successfully.`,
       });
       
-      return data;
+      return updatedData;
     } catch (error: any) {
       console.error('Error creating report:', error);
       

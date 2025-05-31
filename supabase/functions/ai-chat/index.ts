@@ -15,7 +15,15 @@ serve(async (req) => {
   }
 
   try {
+    console.log('AI Chat function called');
+    
+    if (!geminiApiKey) {
+      console.error('Google Gemini API key not found');
+      throw new Error('Google Gemini API key not configured');
+    }
+
     const { message, context } = await req.json();
+    console.log('Received message:', message);
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
@@ -47,8 +55,10 @@ ${context ? `Additional context: ${context}` : ''}`
     );
 
     const data = await response.json();
+    console.log('Gemini API response:', data);
     
     if (!response.ok) {
+      console.error('Gemini API error:', data);
       throw new Error(data.error?.message || 'Failed to generate response');
     }
 
