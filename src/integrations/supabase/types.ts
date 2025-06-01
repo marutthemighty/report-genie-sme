@@ -704,7 +704,7 @@ export type Database = {
             foreignKeyName: "reports_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

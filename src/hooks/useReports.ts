@@ -23,11 +23,11 @@ export interface Report {
 export const useReports = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, initialized } = useAuth();
   const { toast } = useToast();
 
   const fetchReports = async () => {
-    if (!user) {
+    if (!user || !initialized) {
       setLoading(false);
       return;
     }
@@ -49,7 +49,7 @@ export const useReports = () => {
       
       console.log('Fetched reports:', data);
       setReports(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching reports:', error);
       toast({
         title: "Error",
@@ -62,7 +62,7 @@ export const useReports = () => {
   };
 
   const createReport = async (reportData: any) => {
-    if (!user?.id) {
+    if (!user?.id || !initialized) {
       toast({
         title: "Authentication Required",
         description: "Please sign in to create reports.",
@@ -75,13 +75,38 @@ export const useReports = () => {
       console.log('Creating report with data:', reportData);
       console.log('User ID:', user.id);
       
-      // First, check if user exists in auth.users
-      const { data: authUser } = await supabase.auth.getUser();
-      if (!authUser.user) {
-        throw new Error('User session invalid. Please sign out and sign back in.');
+      // Check if user session is valid
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Invalid session. Please sign out and sign back in.');
       }
       
-      // Simplified report payload with only required fields
+      // Ensure user profile exists
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Profile not found, creating one...');
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: user.id,
+            email: user.email,
+            first_name: user.user_metadata?.first_name || '',
+            last_name: user.user_metadata?.last_name || '',
+            company: user.user_metadata?.company || ''
+          }]);
+
+        if (createProfileError) {
+          console.error('Failed to create profile:', createProfileError);
+          throw new Error('Failed to create user profile. Please try again.');
+        }
+      }
+      
+      // Create report payload
       const reportPayload = {
         name: reportData.name || 'Untitled Report',
         report_type: reportData.type || 'General Analysis',
@@ -102,12 +127,6 @@ export const useReports = () => {
 
       if (error) {
         console.error('Supabase error creating report:', error);
-        
-        // Check if it's a foreign key constraint error
-        if (error.message.includes('foreign key constraint')) {
-          throw new Error('User authentication error. Please sign out and sign back in.');
-        }
-        
         throw new Error(`Failed to create report: ${error.message}`);
       }
 
@@ -117,24 +136,28 @@ export const useReports = () => {
 
       console.log('Report created successfully:', data);
       
-      // Update the report with AI content after creation
-      const updatedData = {
-        ...data,
-        ai_summary: `AI-generated summary for ${reportPayload.name}: This report analyzes ${reportPayload.report_type?.toLowerCase() || 'business'} data from ${reportPayload.data_source} over the ${reportPayload.date_range?.toLowerCase() || 'last 30 days'} period.`,
-        ai_prediction: 'Based on current trends, we predict continued growth in the coming months with opportunities for optimization in key performance areas.'
-      };
+      // Generate AI content based on report type
+      const aiSummary = generateAISummary(reportPayload);
+      const aiPrediction = generateAIPrediction(reportPayload);
 
+      // Update the report with AI content
       const { error: updateError } = await supabase
         .from('reports')
         .update({
-          ai_summary: updatedData.ai_summary,
-          ai_prediction: updatedData.ai_prediction
+          ai_summary: aiSummary,
+          ai_prediction: aiPrediction
         })
         .eq('id', data.id);
 
       if (updateError) {
         console.warn('Failed to update AI content:', updateError);
       }
+
+      const updatedData = {
+        ...data,
+        ai_summary: aiSummary,
+        ai_prediction: aiPrediction
+      };
 
       setReports(prev => [updatedData, ...prev]);
       
@@ -173,7 +196,7 @@ export const useReports = () => {
         title: "Report Deleted",
         description: "Report has been deleted successfully.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting report:', error);
       toast({
         title: "Error",
@@ -184,13 +207,15 @@ export const useReports = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchReports();
-    } else {
-      setReports([]);
-      setLoading(false);
+    if (initialized) {
+      if (user) {
+        fetchReports();
+      } else {
+        setReports([]);
+        setLoading(false);
+      }
     }
-  }, [user]);
+  }, [user, initialized]);
 
   return {
     reports,
@@ -199,4 +224,37 @@ export const useReports = () => {
     deleteReport,
     refetch: fetchReports
   };
+};
+
+// Helper functions for AI content generation
+const generateAISummary = (reportData: any): string => {
+  const templates = {
+    'Sales Performance': `Comprehensive analysis of sales performance for ${reportData.data_source} over ${reportData.date_range}. Key metrics include revenue trends, conversion rates, and sales velocity. Notable patterns identified in customer acquisition and retention rates.`,
+    'Cart Abandonment': `In-depth cart abandonment analysis revealing user behavior patterns during checkout process. Analysis includes abandonment rates by funnel stage, device type, and user demographics. Identifies key friction points and optimization opportunities.`,
+    'Product Performance': `Detailed product performance evaluation covering sales metrics, customer satisfaction, and market positioning. Analysis includes product category performance, seasonal trends, and competitive analysis insights.`,
+    'Customer Acquisition': `Customer acquisition analysis examining channel effectiveness, cost per acquisition, and conversion funnels. Identifies high-performing acquisition sources and optimization opportunities for marketing spend.`,
+    'Marketing RoI': `Marketing return on investment analysis across all channels and campaigns. Evaluation includes attribution modeling, lifetime value calculations, and channel performance metrics.`,
+    'Inventory Trends': `Inventory management analysis covering stock levels, turnover rates, and demand forecasting. Identifies seasonal patterns, slow-moving inventory, and optimal reorder points.`,
+    'Customer Retention': `Customer retention analysis examining churn patterns, lifetime value, and engagement metrics. Identifies key retention drivers and at-risk customer segments.`,
+    'Revenue Forecast': `Revenue forecasting model based on historical performance and market trends. Includes scenario planning, confidence intervals, and key growth drivers analysis.`,
+    'Traffic Analytics': `Website traffic analysis covering user behavior, conversion paths, and performance metrics. Identifies traffic sources, user engagement patterns, and optimization opportunities.`
+  };
+  
+  return templates[reportData.report_type] || `AI-generated summary for ${reportData.name}: This comprehensive analysis examines ${reportData.report_type.toLowerCase()} data from ${reportData.data_source} over the ${reportData.date_range.toLowerCase()} period, providing actionable insights and strategic recommendations.`;
+};
+
+const generateAIPrediction = (reportData: any): string => {
+  const predictions = {
+    'Sales Performance': 'Based on current sales trends and seasonal patterns, we predict a 15-20% increase in revenue over the next quarter, with strongest growth expected in high-margin product categories.',
+    'Cart Abandonment': 'Implementing recommended checkout optimizations could reduce abandonment rates by 12-18%, potentially increasing conversion rates and recovering an estimated 25% of lost revenue.',
+    'Product Performance': 'Top-performing products show potential for 30% growth with expanded marketing focus. Underperforming items may benefit from repositioning or promotional strategies.',
+    'Customer Acquisition': 'Optimizing high-performing acquisition channels could reduce CAC by 20-25% while maintaining quality. Focus on channels showing 3x+ LTV:CAC ratios.',
+    'Marketing RoI': 'Reallocating budget to top-performing channels could improve overall ROAS by 35-40%. Recommended focus on channels with consistent 4x+ return rates.',
+    'Inventory Trends': 'Demand forecasting suggests 20% increase in fast-moving items and potential stockouts in 3 categories. Recommended safety stock adjustments provided.',
+    'Customer Retention': 'Implementing retention strategies for at-risk segments could improve retention rates by 15-22%, increasing overall customer lifetime value by an estimated 18%.',
+    'Revenue Forecast': 'Conservative projections show 12-18% revenue growth, with optimistic scenarios reaching 25-30% based on market expansion and product launches.',
+    'Traffic Analytics': 'Website optimization recommendations could improve conversion rates by 20-25%, with mobile experience enhancements showing highest impact potential.'
+  };
+  
+  return predictions[reportData.report_type] || 'Based on current data trends and predictive modeling, we anticipate continued positive performance with opportunities for strategic optimization and growth in key areas identified in this analysis.';
 };

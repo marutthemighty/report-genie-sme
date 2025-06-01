@@ -2,266 +2,322 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Upload, FileText, Database, TrendingUp, BarChart3, PieChart } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { 
+  Upload, 
+  FileText, 
+  Database, 
+  TrendingUp, 
+  Users, 
+  BarChart3,
+  Sparkles,
+  Download
+} from 'lucide-react';
+import { useDataAnalysis } from '@/hooks/useDataAnalysis';
 
 const DataImportPanel = () => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [selectedAnalysis, setSelectedAnalysis] = useState('');
   const [analysisResults, setAnalysisResults] = useState<any>(null);
-  const { toast } = useToast();
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const { loading, analyzeUserData, generateSampleData } = useDataAnalysis();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setAnalysisComplete(false);
-      setAnalysisResults(null);
-    }
-  };
+  const analysisTypes = [
+    { value: 'Sales Analysis', icon: TrendingUp, description: 'Revenue, orders, and sales performance' },
+    { value: 'Customer Insights', icon: Users, description: 'Customer behavior and segmentation' },
+    { value: 'Performance Trends', icon: BarChart3, description: 'Growth patterns and KPI tracking' },
+    { value: 'Custom Analysis', icon: Database, description: 'Tailored analysis for your data' }
+  ];
 
-  const handleUpload = async () => {
-    if (!selectedFile) return;
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     setIsUploading(true);
+    setUploadProgress(0);
+    
     try {
-      // Simulate file processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simulate file upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      // Parse file data (simplified simulation)
+      const fileData = await parseFileData(file);
       
-      toast({
-        title: "Data Imported Successfully",
-        description: `${selectedFile.name} has been processed and is ready for analysis.`,
-      });
+      // Wait for upload to complete
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      
+      if (selectedAnalysis) {
+        const results = await analyzeUserData(fileData, selectedAnalysis);
+        setAnalysisResults(results);
+      }
       
     } catch (error) {
-      toast({
-        title: "Upload Failed",
-        description: "There was an error processing your file. Please try again.",
-        variant: "destructive"
-      });
+      console.error('Upload error:', error);
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
-  const generateAnalysisResults = (analysisType: string, fileName: string) => {
-    const baseInsights = {
-      'Sales Analysis': [
-        `Revenue increased by ${Math.floor(Math.random() * 20) + 10}% compared to previous period`,
-        `Top performing product category: ${['Electronics', 'Clothing', 'Home & Garden', 'Sports'][Math.floor(Math.random() * 4)]}`,
-        `Average order value: $${(Math.random() * 50 + 30).toFixed(2)}`,
-        `Peak sales day: ${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][Math.floor(Math.random() * 7)]}`
-      ],
-      'Customer Insights': [
-        `Customer retention rate: ${Math.floor(Math.random() * 15) + 75}%`,
-        `New customer acquisition increased by ${Math.floor(Math.random() * 10) + 5}%`,
-        `Most active customer segment: ${['Premium', 'Standard', 'Basic'][Math.floor(Math.random() * 3)]} users`,
-        `Average customer lifetime value: $${(Math.random() * 500 + 200).toFixed(2)}`
-      ],
-      'Performance Trends': [
-        `Website conversion rate: ${(Math.random() * 2 + 2).toFixed(2)}%`,
-        `Mobile traffic accounts for ${Math.floor(Math.random() * 20) + 60}% of total visits`,
-        `Page load time improved by ${(Math.random() * 0.5 + 0.1).toFixed(1)}s`,
-        `Bounce rate decreased by ${Math.floor(Math.random() * 5) + 3}%`
-      ],
-      'Custom Analysis': [
-        `Data quality score: ${Math.floor(Math.random() * 10) + 85}%`,
-        `Key performance indicators trending ${['upward', 'stable', 'improving'][Math.floor(Math.random() * 3)]}`,
-        `Anomalies detected: ${Math.floor(Math.random() * 3)} data points require attention`,
-        `Forecast accuracy: ${Math.floor(Math.random() * 10) + 85}%`
-      ]
-    };
-
-    return {
-      type: analysisType,
-      summary: `${analysisType} completed for ${fileName}`,
-      insights: baseInsights[analysisType as keyof typeof baseInsights] || baseInsights['Custom Analysis'],
-      metrics: {
-        totalRecords: Math.floor(Math.random() * 10000) + 1000,
-        dataQuality: Math.floor(Math.random() * 20) + 80,
-        processingTime: `${Math.floor(Math.random() * 5) + 1}.${Math.floor(Math.random() * 9)}s`
-      }
-    };
-  };
-
-  const handleAnalysis = async (analysisType: string) => {
-    if (!selectedFile) return;
-
-    setIsAnalyzing(true);
+  const handleGenerateSampleData = async () => {
+    if (!selectedAnalysis) return;
+    
     try {
-      // Simulate analysis processing
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Generate dynamic analysis results
-      const mockResults = generateAnalysisResults(analysisType, selectedFile.name);
-
-      setAnalysisResults(mockResults);
-      setAnalysisComplete(true);
-      
-      toast({
-        title: "Analysis Complete",
-        description: `${analysisType} has been completed successfully.`,
-      });
-      
+      const results = await generateSampleData(selectedAnalysis);
+      setAnalysisResults(results);
     } catch (error) {
-      toast({
-        title: "Analysis Failed",
-        description: "There was an error analyzing your data. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsAnalyzing(false);
+      console.error('Sample generation error:', error);
     }
   };
 
-  const supportedFormats = ['CSV', 'Excel', 'JSON', 'XML'];
+  const parseFileData = async (file: File) => {
+    // Simulate file parsing - in real app, this would parse CSV/Excel/JSON
+    return {
+      fileName: file.name,
+      fileSize: file.size,
+      records: Array.from({ length: 50 }, (_, i) => ({
+        id: i + 1,
+        revenue: Math.floor(Math.random() * 10000) + 1000,
+        orders: Math.floor(Math.random() * 100) + 10,
+        customers: Math.floor(Math.random() * 50) + 5
+      })),
+      totalRevenue: Math.floor(Math.random() * 500000) + 100000,
+      totalOrders: Math.floor(Math.random() * 2000) + 500,
+      avgOrderValue: Math.floor(Math.random() * 300) + 100,
+      conversionRate: Math.random() * 0.1 + 0.02
+    };
+  };
+
+  const ChartComponent = ({ data, title, type }: { data: any[], title: string, type: string }) => {
+    if (!data || data.length === 0) return null;
+
+    return (
+      <Card className="h-64">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {data.slice(0, 5).map((item, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">{item.name}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-20 h-2 bg-gray-200 rounded">
+                    <div 
+                      className="h-full bg-blue-500 rounded"
+                      style={{ width: `${(item.value / Math.max(...data.map(d => d.value))) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-medium">{typeof item.value === 'number' ? item.value.toLocaleString() : item.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="w-5 h-5" />
-          Data Import & Analysis
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="file-upload">Upload Your Dataset</Label>
-          <Input
-            id="file-upload"
-            type="file"
-            accept=".csv,.xlsx,.xls,.json,.xml"
-            onChange={handleFileSelect}
-            className="cursor-pointer"
-          />
-          <p className="text-xs text-gray-500">
-            Supported formats: {supportedFormats.join(', ')}
-          </p>
-        </div>
-
-        {selectedFile && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-4 h-4" />
-              <span className="text-sm font-medium">{selectedFile.name}</span>
+    <div className="space-y-6">
+      {/* Analysis Type Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="w-5 h-5" />
+            Data Analysis
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Select Analysis Type</label>
+              <Select value={selectedAnalysis} onValueChange={setSelectedAnalysis}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose analysis type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {analysisTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      <div className="flex items-center gap-2">
+                        <type.icon className="w-4 h-4" />
+                        <div>
+                          <div className="font-medium">{type.value}</div>
+                          <div className="text-xs text-gray-500">{type.description}</div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              Size: {(selectedFile.size / 1024).toFixed(2)} KB
-            </p>
-          </div>
-        )}
 
-        {!isUploading && selectedFile && !analysisComplete && (
-          <Button 
-            onClick={handleUpload}
-            className="w-full"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Process Dataset
-          </Button>
-        )}
-
-        {isUploading && (
-          <Button disabled className="w-full">
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-            Processing...
-          </Button>
-        )}
-
-        {!isUploading && selectedFile && !analysisComplete && (
-          <div className="border-t pt-4">
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Quick Analysis Options
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleAnalysis('Sales Analysis')}
-                disabled={isAnalyzing}
-              >
-                <BarChart3 className="w-3 h-3 mr-1" />
-                Sales Analysis
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleAnalysis('Customer Insights')}
-                disabled={isAnalyzing}
-              >
-                <PieChart className="w-3 h-3 mr-1" />
-                Customer Insights
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleAnalysis('Performance Trends')}
-                disabled={isAnalyzing}
-              >
-                <TrendingUp className="w-3 h-3 mr-1" />
-                Performance Trends
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleAnalysis('Custom Analysis')}
-                disabled={isAnalyzing}
-              >
-                Custom Analysis
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {isAnalyzing && (
-          <div className="border-t pt-4">
-            <div className="flex items-center gap-2 text-blue-600">
-              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm">Analyzing your data...</span>
-            </div>
-          </div>
-        )}
-
-        {analysisComplete && analysisResults && (
-          <div className="border-t pt-4 space-y-3">
-            <h4 className="font-medium text-green-600">✓ Analysis Complete</h4>
-            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-              <h5 className="font-medium text-sm mb-2">{analysisResults.summary}</h5>
-              <div className="space-y-1">
-                {analysisResults.insights.map((insight: string, index: number) => (
-                  <p key={index} className="text-xs text-gray-600 dark:text-gray-400">
-                    • {insight}
-                  </p>
-                ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* File Upload */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Upload Your Data</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600 mb-2">Upload CSV, Excel, or JSON files</p>
+                  <input
+                    type="file"
+                    accept=".csv,.xlsx,.xls,.json"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="file-upload"
+                    disabled={!selectedAnalysis || isUploading || loading}
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md cursor-pointer ${
+                      selectedAnalysis && !isUploading && !loading
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Choose File
+                  </label>
+                </div>
+                {isUploading && (
+                  <div className="space-y-2">
+                    <Progress value={uploadProgress} className="w-full" />
+                    <p className="text-sm text-gray-600">Uploading and processing...</p>
+                  </div>
+                )}
               </div>
-              <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800">
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Records: {analysisResults.metrics.totalRecords}</span>
-                  <span>Quality: {analysisResults.metrics.dataQuality}%</span>
-                  <span>Time: {analysisResults.metrics.processingTime}</span>
+
+              {/* Sample Data Generation */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Try Sample Data</label>
+                <div className="border border-gray-300 rounded-lg p-4 text-center">
+                  <Sparkles className="w-8 h-8 mx-auto text-blue-500 mb-2" />
+                  <p className="text-sm text-gray-600 mb-2">Generate realistic sample data for testing</p>
+                  <Button
+                    onClick={handleGenerateSampleData}
+                    disabled={!selectedAnalysis || loading}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Sample Data
+                  </Button>
                 </div>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setAnalysisComplete(false);
-                setAnalysisResults(null);
-              }}
-              className="w-full"
-            >
-              Run New Analysis
-            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Analysis Results */}
+      {analysisResults && (
+        <div className="space-y-6">
+          {/* Summary Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>{selectedAnalysis} Results</span>
+                <Badge variant="outline" className="bg-green-50 text-green-700">
+                  Analysis Complete
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 mb-4">{analysisResults.summary}</p>
+              
+              {/* Key Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                {analysisResults.keyMetrics.map((metric: any, index: number) => (
+                  <div key={index} className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
+                    <div className="text-sm text-gray-600">{metric.label}</div>
+                    <div className={`text-xs ${metric.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                      {metric.change}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Charts */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <ChartComponent 
+              data={analysisResults.charts.revenue} 
+              title="Revenue Trends" 
+              type="line" 
+            />
+            <ChartComponent 
+              data={analysisResults.charts.customers} 
+              title="Customer Segments" 
+              type="pie" 
+            />
+            <ChartComponent 
+              data={analysisResults.charts.products} 
+              title="Product Performance" 
+              type="bar" 
+            />
+          </div>
+
+          {/* Recommendations */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                AI Recommendations
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {analysisResults.recommendations.map((recommendation: string, index: number) => (
+                  <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-medium mt-0.5">
+                      {index + 1}
+                    </div>
+                    <p className="text-gray-700 flex-1">{recommendation}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Export Options */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="w-5 h-5" />
+                Export Results
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4">
+                <Button variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export PDF
+                </Button>
+                <Button variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Excel
+                </Button>
+                <Button variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export JSON
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
   );
 };
 
