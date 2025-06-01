@@ -168,7 +168,7 @@ const DataImportPanel = () => {
                 <label className="block text-sm font-medium">Upload Your Data</label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600 mb-2">Upload CSV, Excel, or JSON files</p>
+                  <p className="text-sm text-gray-600 mb-3">Upload CSV, Excel, or JSON files</p>
                   <input
                     type="file"
                     accept=".csv,.xlsx,.xls,.json"
@@ -179,14 +179,14 @@ const DataImportPanel = () => {
                   />
                   <label
                     htmlFor="file-upload"
-                    className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-md cursor-pointer ${
+                    className={`inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors w-full max-w-[140px] ${
                       selectedAnalysis && !isUploading && !loading
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Choose File
+                    <FileText className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">Choose File</span>
                   </label>
                 </div>
                 {isUploading && (
@@ -202,14 +202,15 @@ const DataImportPanel = () => {
                 <label className="block text-sm font-medium">Try Sample Data</label>
                 <div className="border border-gray-300 rounded-lg p-4 text-center">
                   <Sparkles className="w-8 h-8 mx-auto text-blue-500 mb-2" />
-                  <p className="text-sm text-gray-600 mb-2">Generate realistic sample data for testing</p>
+                  <p className="text-sm text-gray-600 mb-3">Generate realistic sample data for testing</p>
                   <Button
                     onClick={handleGenerateSampleData}
                     disabled={!selectedAnalysis || loading}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 w-full max-w-[180px] text-sm px-3 py-2"
+                    size="sm"
                   >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generate Sample Data
+                    <Sparkles className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">Generate Sample Data</span>
                   </Button>
                 </div>
               </div>
@@ -280,7 +281,7 @@ const DataImportPanel = () => {
               <div className="space-y-3">
                 {analysisResults.recommendations.map((recommendation: string, index: number) => (
                   <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-medium mt-0.5">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-medium mt-0.5 flex-shrink-0">
                       {index + 1}
                     </div>
                     <p className="text-gray-700 flex-1">{recommendation}</p>
@@ -299,16 +300,16 @@ const DataImportPanel = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4">
-                <Button variant="outline">
+              <div className="flex flex-wrap gap-4">
+                <Button variant="outline" size="sm">
                   <Download className="w-4 h-4 mr-2" />
                   Export PDF
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" size="sm">
                   <Download className="w-4 h-4 mr-2" />
                   Export Excel
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" size="sm">
                   <Download className="w-4 h-4 mr-2" />
                   Export JSON
                 </Button>
