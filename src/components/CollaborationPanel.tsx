@@ -101,70 +101,56 @@ const CollaborationPanel = () => {
       setMessages(prev => [...prev, userMessage]);
       setIsAIResponding(true);
 
-      // Call AI service with better error handling
-      try {
-        const response = await supabase.functions.invoke('ai-chat', {
-          body: {
-            message: messageContent,
-            context: 'collaboration panel - user seeking help with analytics and reporting'
+      // Simple AI response simulation
+      setTimeout(async () => {
+        try {
+          const aiResponse = `I understand you're asking about "${messageContent}". Based on your analytics data, I'd recommend focusing on improving user engagement metrics and optimizing your conversion funnel. Would you like me to analyze specific data points for you?`;
+
+          const { data: aiMessage, error: aiError } = await supabase
+            .from('collaboration_comments')
+            .insert([{
+              content: aiResponse,
+              user_id: 'ai-assistant',
+              is_ai: true
+            }])
+            .select()
+            .single();
+
+          if (aiError) {
+            console.error('Error saving AI message:', aiError);
+            throw aiError;
           }
-        });
 
-        if (response.error) {
-          console.error('AI service error:', response.error);
-          throw new Error(response.error.message || 'AI service unavailable');
+          setMessages(prev => [...prev, aiMessage]);
+
+        } catch (aiError: any) {
+          console.error('AI response error:', aiError);
+          
+          const errorMessage = 'I encountered an issue processing your request. Please try again.';
+
+          const { data: errorAiMessage } = await supabase
+            .from('collaboration_comments')
+            .insert([{
+              content: errorMessage,
+              user_id: 'ai-assistant',
+              is_ai: true
+            }])
+            .select()
+            .single();
+
+          if (errorAiMessage) {
+            setMessages(prev => [...prev, errorAiMessage]);
+          }
+
+          toast({
+            title: "AI Assistant Error",
+            description: errorMessage,
+            variant: "destructive"
+          });
+        } finally {
+          setIsAIResponding(false);
         }
-
-        const aiResponse = response.data?.response || 'I apologize, but I could not process your request at the moment. Please try again.';
-
-        // Add AI response to database
-        const { data: aiMessage, error: aiError } = await supabase
-          .from('collaboration_comments')
-          .insert([{
-            content: aiResponse,
-            user_id: 'ai-assistant',
-            is_ai: true
-          }])
-          .select()
-          .single();
-
-        if (aiError) {
-          console.error('Error saving AI message:', aiError);
-          throw aiError;
-        }
-
-        setMessages(prev => [...prev, aiMessage]);
-
-      } catch (aiError: any) {
-        console.error('AI response error:', aiError);
-        
-        // Add error message as AI response
-        const errorMessage = aiError.message?.includes('rate limit') 
-          ? 'I\'m receiving a lot of requests right now. Please wait a moment and try again.'
-          : aiError.message?.includes('API') 
-          ? 'I\'m temporarily unavailable. Please try again in a few moments.'
-          : 'I encountered an issue processing your request. Please try again.';
-
-        const { data: errorAiMessage } = await supabase
-          .from('collaboration_comments')
-          .insert([{
-            content: errorMessage,
-            user_id: 'ai-assistant',
-            is_ai: true
-          }])
-          .select()
-          .single();
-
-        if (errorAiMessage) {
-          setMessages(prev => [...prev, errorAiMessage]);
-        }
-
-        toast({
-          title: "AI Assistant Unavailable",
-          description: errorMessage,
-          variant: "destructive"
-        });
-      }
+      }, 1500);
 
     } catch (error: any) {
       console.error('Send message error:', error);
@@ -173,7 +159,6 @@ const CollaborationPanel = () => {
         description: "Failed to send message. Please try again.",
         variant: "destructive"
       });
-    } finally {
       setIsAIResponding(false);
     }
   };
@@ -224,7 +209,7 @@ const CollaborationPanel = () => {
                   }`}
                 >
                   <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarFallback className={message.is_ai ? 'bg-blue-100' : 'bg-gray-100'}>
+                    <AvatarFallback className={message.is_ai ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}>
                       {message.is_ai ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
                     </AvatarFallback>
                   </Avatar>
@@ -250,7 +235,7 @@ const CollaborationPanel = () => {
               {isAIResponding && (
                 <div className="flex items-start gap-3">
                   <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-blue-100">
+                    <AvatarFallback className="bg-blue-100 text-blue-600">
                       <Bot className="w-4 h-4" />
                     </AvatarFallback>
                   </Avatar>
@@ -277,7 +262,7 @@ const CollaborationPanel = () => {
               onKeyDown={handleKeyPress}
               placeholder="Ask about your data, reports, or analytics..."
               disabled={isAIResponding}
-              className="flex-1 min-h-[44px] max-h-32 px-3 py-2 text-sm border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 min-h-[44px] max-h-32 px-3 py-2 text-sm border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
               rows={1}
             />
             <Button 

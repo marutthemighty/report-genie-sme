@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { BarChart3, FileText, Settings, Plus, Home, Database, Bell, HelpCircle } from 'lucide-react';
+import { BarChart3, FileText, Settings, Plus, Home, Database, Bell, HelpCircle, Edit } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import ThemeToggle from './ThemeToggle';
@@ -19,6 +19,7 @@ const Sidebar = ({ onCreateReport }: SidebarProps) => {
     const path = location.pathname;
     if (path === '/') return 'dashboard';
     if (path === '/reports') return 'reports';
+    if (path === '/editor') return 'editor';
     if (path === '/settings') return 'settings';
     if (path === '/integrations') return 'integrations';
     if (path === '/notifications') return 'notifications';
@@ -30,6 +31,7 @@ const Sidebar = ({ onCreateReport }: SidebarProps) => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/' },
     { id: 'reports', label: 'Reports', icon: FileText, path: '/reports' },
     { id: 'create', label: 'Create Report', icon: Plus, action: 'create' },
+    { id: 'editor', label: 'Editor', icon: Edit, path: '/editor' },
     { id: 'integrations', label: 'Integrations', icon: Database, path: '/integrations' },
     { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
     { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },

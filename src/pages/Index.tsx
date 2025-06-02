@@ -231,7 +231,7 @@ const Index = () => {
       </div>
 
       {/* Analysis Results Section - Only show when analysis is complete */}
-      {analysisResults && (
+      {analysisResults ? (
         <div className="space-y-6">
           {/* Analysis Results Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -265,68 +265,71 @@ const Index = () => {
                 </CardContent>
               </Card>
 
-              {/* Charts */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {analysisResults.charts?.revenue && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Revenue Trends</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {analysisResults.charts.revenue.slice(0, 5).map((item: any, index: number) => (
-                          <div key={index} className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">{item.name}</span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-gray-200 rounded">
-                                <div 
-                                  className="h-full bg-blue-500 rounded"
-                                  style={{ 
-                                    width: `${(item.value / Math.max(...analysisResults.charts.revenue.map((d: any) => d.value))) * 100}%` 
-                                  }}
-                                />
+              {/* Charts - Fixed layout: 2 on top, 1 below */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {analysisResults.charts?.revenue && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Revenue Trends</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {analysisResults.charts.revenue.slice(0, 5).map((item: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">{item.name}</span>
+                              <div className="flex items-center gap-2">
+                                <div className="w-16 h-2 bg-gray-200 rounded">
+                                  <div 
+                                    className="h-full bg-blue-500 rounded"
+                                    style={{ 
+                                      width: `${(item.value / Math.max(...analysisResults.charts.revenue.map((d: any) => d.value))) * 100}%` 
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-sm font-medium text-right w-12">
+                                  {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
+                                </span>
                               </div>
-                              <span className="text-sm font-medium text-right w-12">
-                                {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
-                              </span>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                {analysisResults.charts?.customers && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Customer Segments</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {analysisResults.charts.customers.slice(0, 5).map((item: any, index: number) => (
-                          <div key={index} className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">{item.name}</span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-gray-200 rounded">
-                                <div 
-                                  className="h-full bg-green-500 rounded"
-                                  style={{ 
-                                    width: `${(item.value / Math.max(...analysisResults.charts.customers.map((d: any) => d.value))) * 100}%` 
-                                  }}
-                                />
+                  {analysisResults.charts?.customers && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Customer Segments</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {analysisResults.charts.customers.slice(0, 5).map((item: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">{item.name}</span>
+                              <div className="flex items-center gap-2">
+                                <div className="w-16 h-2 bg-gray-200 rounded">
+                                  <div 
+                                    className="h-full bg-green-500 rounded"
+                                    style={{ 
+                                      width: `${(item.value / Math.max(...analysisResults.charts.customers.map((d: any) => d.value))) * 100}%` 
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-sm font-medium text-right w-12">
+                                  {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
+                                </span>
                               </div>
-                              <span className="text-sm font-medium text-right w-12">
-                                {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
-                              </span>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
 
+                {/* Third chart below the first two */}
                 {analysisResults.charts?.products && (
                   <Card>
                     <CardHeader className="pb-2">
@@ -467,10 +470,8 @@ const Index = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Original Bottom Section - Only show when no analysis results */}
-      {!analysisResults && (
+      ) : (
+        /* Original Bottom Section - Only show when no analysis results */
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
