@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
+import Editor from "./pages/Editor";
 import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
 import Help from "./pages/Help";
@@ -65,6 +66,11 @@ const AppContent = () => {
         <Route path="/reports" element={
           <ProtectedRoute>
             <Reports />
+          </ProtectedRoute>
+        } />
+        <Route path="/editor" element={
+          <ProtectedRoute>
+            <Editor />
           </ProtectedRoute>
         } />
         <Route path="/integrations" element={

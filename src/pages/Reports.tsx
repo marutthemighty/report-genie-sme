@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,14 +66,8 @@ const Reports = () => {
       description: `Loading "${reportName}" for editing...`,
     });
     
-    // Navigate to dashboard with the report data for editing
-    navigate('/', { 
-      state: { 
-        editReport: reportId,
-        reportName: reportName,
-        activeTab: 'ai-preview' // Open in AI Preview tab for editing
-      }
-    });
+    // Navigate to the dedicated Editor page with the report ID
+    navigate(`/editor?id=${reportId}`);
   };
 
   const handleDownload = (report: any) => {

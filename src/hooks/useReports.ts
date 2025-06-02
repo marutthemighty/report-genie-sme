@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -181,6 +180,72 @@ export const useReports = () => {
     }
   };
 
+  const updateReport = async (reportId: string, reportData: any) => {
+    if (!user?.id || !initialized) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to update reports.",
+        variant: "destructive"
+      });
+      throw new Error('User not authenticated');
+    }
+    
+    try {
+      console.log('Updating report:', reportId, reportData);
+      
+      const { data, error } = await supabase
+        .from('reports')
+        .update({
+          name: reportData.name,
+          report_type: reportData.report_type,
+          data_source: reportData.data_source,
+          date_range: reportData.date_range,
+          ai_summary: reportData.ai_summary,
+          ai_prediction: reportData.ai_prediction,
+          template_layout: reportData.template_layout,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', reportId)
+        .eq('created_by', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error updating report:', error);
+        throw new Error(`Failed to update report: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error('No data returned from report update');
+      }
+
+      console.log('Report updated successfully:', data);
+      
+      // Update local state
+      setReports(prev => prev.map(report => 
+        report.id === reportId ? data : report
+      ));
+      
+      toast({
+        title: "Report Updated",
+        description: `${reportData.name} has been updated successfully.`,
+      });
+      
+      return data;
+    } catch (error: any) {
+      console.error('Error updating report:', error);
+      
+      const errorMessage = error.message || 'An unexpected error occurred while updating the report.';
+      
+      toast({
+        title: "Error Updating Report",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   const deleteReport = async (reportId: string) => {
     try {
       const { error } = await supabase
@@ -221,6 +286,7 @@ export const useReports = () => {
     reports,
     loading,
     createReport,
+    updateReport,
     deleteReport,
     refetch: fetchReports
   };
