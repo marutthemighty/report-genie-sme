@@ -51,6 +51,8 @@ const CollaborationPanel = () => {
   const fetchMessages = async () => {
     try {
       setIsLoading(true);
+      setConnectionStatus('connecting');
+      
       const { data, error } = await supabase
         .from('collaboration_comments')
         .select('*')
@@ -59,15 +61,17 @@ const CollaborationPanel = () => {
 
       if (error) {
         console.error('Error fetching messages:', error);
+        setConnectionStatus('error');
         toast({
-          title: "Error",
-          description: "Failed to load messages. Please refresh the page.",
+          title: "Connection Error",
+          description: "Failed to load messages. Please check your connection.",
           variant: "destructive"
         });
         return;
       }
 
       setMessages(data || []);
+      setConnectionStatus('connected');
     } catch (error) {
       console.error('Fetch messages error:', error);
       setConnectionStatus('error');
@@ -90,7 +94,7 @@ const CollaborationPanel = () => {
         .from('collaboration_comments')
         .insert([{
           content: messageContent,
-          user_id: 'user-' + Date.now(), // Temporary user ID
+          user_id: `user-${Date.now()}`,
           is_ai: false
         }])
         .select()
@@ -106,7 +110,7 @@ const CollaborationPanel = () => {
       setConnectionStatus('connected');
       setIsAIResponding(true);
 
-      // Call AI service
+      // Call AI service with better error handling
       try {
         const response = await supabase.functions.invoke('ai-chat', {
           body: {
@@ -310,12 +314,12 @@ const CollaborationPanel = () => {
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask about your data, reports, or analytics..."
-              disabled={isAIResponding || connectionStatus === 'error'}
+              disabled={isAIResponding}
               className="flex-1"
             />
             <Button 
               onClick={sendMessage} 
-              disabled={!newMessage.trim() || isAIResponding || connectionStatus === 'error'}
+              disabled={!newMessage.trim() || isAIResponding}
               size="icon"
             >
               {isAIResponding ? (

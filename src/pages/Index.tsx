@@ -203,9 +203,9 @@ const Index = () => {
         </Card>
       </div>
 
-      {/* Charts and Data Import */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
+      {/* Charts and Data Import - Fixed layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5" />

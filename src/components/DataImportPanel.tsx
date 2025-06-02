@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Upload, 
   FileText, 
@@ -23,6 +23,7 @@ const DataImportPanel = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const { loading, analyzeUserData, generateSampleData } = useDataAnalysis();
+  const { toast } = useToast();
 
   const analysisTypes = [
     { value: 'Sales Analysis', icon: TrendingUp, description: 'Revenue, orders, and sales performance' },
@@ -96,6 +97,119 @@ const DataImportPanel = () => {
       avgOrderValue: Math.floor(Math.random() * 300) + 100,
       conversionRate: Math.random() * 0.1 + 0.02
     };
+  };
+
+  const exportToPDF = async () => {
+    if (!analysisResults) return;
+    
+    try {
+      const content = `
+Analysis Report: ${selectedAnalysis}
+
+Summary:
+${analysisResults.summary}
+
+Key Metrics:
+${analysisResults.keyMetrics.map((metric: any) => `${metric.label}: ${metric.value} (${metric.change})`).join('\n')}
+
+Recommendations:
+${analysisResults.recommendations.map((rec: string, idx: number) => `${idx + 1}. ${rec}`).join('\n')}
+      `;
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedAnalysis.replace(' ', '_')}_analysis.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: "Analysis report has been downloaded as a text file.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Could not export the analysis report.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const exportToExcel = async () => {
+    if (!analysisResults) return;
+    
+    try {
+      // Create CSV content
+      let csvContent = "Analysis Report\n\n";
+      csvContent += `Analysis Type,${selectedAnalysis}\n\n`;
+      csvContent += "Key Metrics\n";
+      csvContent += "Metric,Value,Change\n";
+      analysisResults.keyMetrics.forEach((metric: any) => {
+        csvContent += `"${metric.label}","${metric.value}","${metric.change}"\n`;
+      });
+      csvContent += "\nRecommendations\n";
+      analysisResults.recommendations.forEach((rec: string, idx: number) => {
+        csvContent += `"${idx + 1}","${rec}"\n`;
+      });
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedAnalysis.replace(' ', '_')}_analysis.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: "Analysis report has been downloaded as a CSV file.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Could not export the analysis report.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const exportToJSON = async () => {
+    if (!analysisResults) return;
+    
+    try {
+      const jsonData = {
+        analysisType: selectedAnalysis,
+        timestamp: new Date().toISOString(),
+        ...analysisResults
+      };
+      
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedAnalysis.replace(' ', '_')}_analysis.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: "Analysis report has been downloaded as a JSON file.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Could not export the analysis report.",
+        variant: "destructive"
+      });
+    }
   };
 
   const ChartComponent = ({ data, title, type }: { data: any[], title: string, type: string }) => {
@@ -301,15 +415,15 @@ const DataImportPanel = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-4">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={exportToPDF}>
                   <Download className="w-4 h-4 mr-2" />
                   Export PDF
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={exportToExcel}>
                   <Download className="w-4 h-4 mr-2" />
                   Export Excel
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={exportToJSON}>
                   <Download className="w-4 h-4 mr-2" />
                   Export JSON
                 </Button>
