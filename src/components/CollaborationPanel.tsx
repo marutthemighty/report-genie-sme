@@ -2,8 +2,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +12,6 @@ import {
   Bot, 
   User, 
   Clock,
-  AlertCircle,
   Loader2
 } from 'lucide-react';
 
@@ -32,7 +29,6 @@ const CollaborationPanel = () => {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAIResponding, setIsAIResponding] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'error'>('connected');
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -52,7 +48,6 @@ const CollaborationPanel = () => {
   const fetchMessages = async () => {
     try {
       setIsLoading(true);
-      setConnectionStatus('connecting');
       
       const { data, error } = await supabase
         .from('collaboration_comments')
@@ -60,18 +55,19 @@ const CollaborationPanel = () => {
         .order('created_at', { ascending: true })
         .limit(50);
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching messages:', error);
-        setConnectionStatus('connected'); // Don't show error for empty table
-        setMessages([]);
+        toast({
+          title: "Error",
+          description: "Failed to load messages. Please try again.",
+          variant: "destructive"
+        });
         return;
       }
 
       setMessages(data || []);
-      setConnectionStatus('connected');
     } catch (error) {
       console.error('Fetch messages error:', error);
-      setConnectionStatus('connected'); // Keep connected status
       setMessages([]);
     } finally {
       setIsLoading(false);
@@ -85,8 +81,6 @@ const CollaborationPanel = () => {
     setNewMessage('');
 
     try {
-      setConnectionStatus('connecting');
-      
       // Add user message to database
       const { data: userMessage, error: userError } = await supabase
         .from('collaboration_comments')
@@ -105,7 +99,6 @@ const CollaborationPanel = () => {
 
       // Update local state immediately
       setMessages(prev => [...prev, userMessage]);
-      setConnectionStatus('connected');
       setIsAIResponding(true);
 
       // Call AI service with better error handling
@@ -175,7 +168,6 @@ const CollaborationPanel = () => {
 
     } catch (error: any) {
       console.error('Send message error:', error);
-      setConnectionStatus('connected'); // Keep connected status
       toast({
         title: "Message Failed",
         description: "Failed to send message. Please try again.",
@@ -200,26 +192,12 @@ const CollaborationPanel = () => {
     });
   };
 
-  const getConnectionStatusBadge = () => {
-    switch (connectionStatus) {
-      case 'connected':
-        return <Badge variant="outline" className="bg-green-50 text-green-700">Connected</Badge>;
-      case 'connecting':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700">Connecting...</Badge>;
-      case 'error':
-        return <Badge variant="outline" className="bg-red-50 text-red-700">Connection Error</Badge>;
-    }
-  };
-
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="flex-shrink-0">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5" />
-            AI Assistant
-          </div>
-          {getConnectionStatusBadge()}
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="w-5 h-5" />
+          AI Assistant
         </CardTitle>
       </CardHeader>
       

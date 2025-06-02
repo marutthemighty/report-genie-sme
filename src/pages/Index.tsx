@@ -18,6 +18,7 @@ const Index = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [timeRange, setTimeRange] = useState('30d');
   const [activeTab, setActiveTab] = useState('overview');
+  const [analysisResults, setAnalysisResults] = useState<any>(null);
   const { createReport } = useReports();
   const location = useLocation();
 
@@ -226,59 +227,301 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        <DataImportPanel />
+        <DataImportPanel onAnalysisComplete={setAnalysisResults} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Traffic Sources
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={trafficData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {trafficData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Analysis Results Section - Only show when analysis is complete */}
+      {analysisResults && (
+        <div className="space-y-6">
+          {/* Analysis Results Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Analysis Results and Charts */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Analysis Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{analysisResults.analysisType} Results</span>
+                    <span className="bg-green-50 text-green-700 px-2 py-1 rounded-md text-sm">
+                      Analysis Complete
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-700 mb-4">{analysisResults.summary}</p>
+                  
+                  {/* Key Metrics */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {analysisResults.keyMetrics?.map((metric: any, index: number) => (
+                      <div key={index} className="text-center p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xl font-bold text-gray-900">{metric.value}</div>
+                        <div className="text-sm text-gray-600">{metric.label}</div>
+                        <div className={`text-xs ${metric.change?.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                          {metric.change}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              Conversion Rate Trend
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={conversionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+              {/* Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {analysisResults.charts?.revenue && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Revenue Trends</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {analysisResults.charts.revenue.slice(0, 5).map((item: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">{item.name}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-2 bg-gray-200 rounded">
+                                <div 
+                                  className="h-full bg-blue-500 rounded"
+                                  style={{ 
+                                    width: `${(item.value / Math.max(...analysisResults.charts.revenue.map((d: any) => d.value))) * 100}%` 
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium text-right w-12">
+                                {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {analysisResults.charts?.customers && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Customer Segments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {analysisResults.charts.customers.slice(0, 5).map((item: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">{item.name}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-2 bg-gray-200 rounded">
+                                <div 
+                                  className="h-full bg-green-500 rounded"
+                                  style={{ 
+                                    width: `${(item.value / Math.max(...analysisResults.charts.customers.map((d: any) => d.value))) * 100}%` 
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium text-right w-12">
+                                {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {analysisResults.charts?.products && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Product Performance</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {analysisResults.charts.products.slice(0, 5).map((item: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">{item.name}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-2 bg-gray-200 rounded">
+                                <div 
+                                  className="h-full bg-orange-500 rounded"
+                                  style={{ 
+                                    width: `${(item.value / Math.max(...analysisResults.charts.products.map((d: any) => d.value))) * 100}%` 
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium text-right w-12">
+                                {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column - Recommendations and Export */}
+            <div className="space-y-6">
+              {/* AI Recommendations */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    AI Recommendations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {analysisResults.recommendations?.map((recommendation: string, index: number) => (
+                      <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-medium mt-0.5 flex-shrink-0">
+                          {index + 1}
+                        </div>
+                        <p className="text-gray-700 flex-1 text-sm">{recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Export Options */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Export Results
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => {
+                        const content = `Analysis Report: ${analysisResults.analysisType}\n\nSummary:\n${analysisResults.summary}\n\nKey Metrics:\n${analysisResults.keyMetrics?.map((m: any) => `${m.label}: ${m.value} (${m.change})`).join('\n')}\n\nRecommendations:\n${analysisResults.recommendations?.map((r: string, i: number) => `${i + 1}. ${r}`).join('\n')}`;
+                        const blob = new Blob([content], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${analysisResults.analysisType.replace(' ', '_')}_analysis.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      Export PDF
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => {
+                        let csvContent = `Analysis Type,${analysisResults.analysisType}\n\nKey Metrics\nMetric,Value,Change\n`;
+                        analysisResults.keyMetrics?.forEach((metric: any) => {
+                          csvContent += `"${metric.label}","${metric.value}","${metric.change}"\n`;
+                        });
+                        csvContent += "\nRecommendations\n";
+                        analysisResults.recommendations?.forEach((rec: string, idx: number) => {
+                          csvContent += `"${idx + 1}","${rec}"\n`;
+                        });
+                        const blob = new Blob([csvContent], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${analysisResults.analysisType.replace(' ', '_')}_analysis.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      Export Excel
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => {
+                        const jsonData = {
+                          analysisType: analysisResults.analysisType,
+                          timestamp: new Date().toISOString(),
+                          ...analysisResults
+                        };
+                        const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${analysisResults.analysisType.replace(' ', '_')}_analysis.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      Export JSON
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Original Bottom Section - Only show when no analysis results */}
+      {!analysisResults && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Traffic Sources
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={trafficData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {trafficData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Conversion Rate Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={conversionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 

@@ -63,15 +63,16 @@ const Reports = () => {
 
   const handleEdit = (reportId: string, reportName: string) => {
     toast({
-      title: "Opening Editor",
-      description: `Opening editor for "${reportName}"...`,
+      title: "Opening Report Editor",
+      description: `Loading "${reportName}" for editing...`,
     });
     
-    // Navigate to dashboard with the report data
+    // Navigate to dashboard with the report data for editing
     navigate('/', { 
       state: { 
         editReport: reportId,
-        reportName: reportName
+        reportName: reportName,
+        activeTab: 'ai-preview' // Open in AI Preview tab for editing
       }
     });
   };
@@ -119,6 +120,67 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
       toast({
         title: "Download Failed",
         description: "Failed to download the report. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleExportAll = () => {
+    try {
+      if (filteredReports.length === 0) {
+        toast({
+          title: "No Reports to Export",
+          description: "There are no reports matching your current filters.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create combined report content
+      let allReportsContent = `All Reports Export\nGenerated on: ${new Date().toLocaleDateString()}\nTotal Reports: ${filteredReports.length}\n\n`;
+      
+      filteredReports.forEach((report, index) => {
+        allReportsContent += `
+========== REPORT ${index + 1} ==========
+Name: ${report.name}
+Type: ${report.report_type}
+Data Source: ${report.data_source}
+Date Range: ${report.date_range}
+Status: ${report.status}
+Created: ${new Date(report.created_at).toLocaleDateString()}
+
+AI Summary:
+${report.ai_summary || 'No AI summary available.'}
+
+AI Predictions:
+${report.ai_prediction || 'No AI predictions available.'}
+
+Report ID: ${report.id}
+Generated At: ${new Date(report.generated_at).toLocaleString()}
+
+`;
+      });
+
+      // Create and download the file
+      const blob = new Blob([allReportsContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `all_reports_export_${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Complete",
+        description: `${filteredReports.length} reports have been exported successfully.`,
+      });
+    } catch (error) {
+      console.error('Export all error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export reports. Please try again.",
         variant: "destructive"
       });
     }
@@ -234,7 +296,12 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Actions</label>
-                  <Button variant="outline" className="w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleExportAll}
+                    disabled={filteredReports.length === 0}
+                  >
                     <Download className="w-4 h-4 mr-2" />
                     Export All
                   </Button>
@@ -310,6 +377,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                               variant="ghost" 
                               size="sm"
                               onClick={() => handleEdit(report.id, report.name)}
+                              title="Edit Report"
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -317,6 +385,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                               variant="ghost" 
                               size="sm"
                               onClick={() => handleDownload(report)}
+                              title="Download Report"
                             >
                               <Download className="w-4 h-4" />
                             </Button>
@@ -325,6 +394,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                               size="sm" 
                               className="text-red-600"
                               onClick={() => handleDelete(report.id)}
+                              title="Delete Report"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
