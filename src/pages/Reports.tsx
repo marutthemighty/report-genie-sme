@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ const Reports = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const { reports, loading, createReport, deleteReport } = useReports();
 
@@ -59,18 +61,67 @@ const Reports = () => {
     }
   };
 
-  const handleEdit = (reportId: string) => {
+  const handleEdit = (reportId: string, reportName: string) => {
     toast({
-      title: "Edit Report",
-      description: `Opening editor for report ${reportId}`,
+      title: "Opening Editor",
+      description: `Opening editor for "${reportName}"...`,
+    });
+    
+    // Navigate to dashboard with the report data
+    navigate('/', { 
+      state: { 
+        editReport: reportId,
+        reportName: reportName
+      }
     });
   };
 
-  const handleDownload = (reportId: string, reportName: string) => {
-    toast({
-      title: "Download Started",
-      description: `Downloading ${reportName}...`,
-    });
+  const handleDownload = (report: any) => {
+    try {
+      // Create comprehensive report content
+      const reportContent = `
+${report.name}
+Generated on: ${new Date(report.created_at).toLocaleDateString()}
+
+Report Type: ${report.report_type}
+Data Source: ${report.data_source}
+Date Range: ${report.date_range}
+Status: ${report.status}
+
+AI Summary:
+${report.ai_summary || 'No AI summary available.'}
+
+AI Predictions:
+${report.ai_prediction || 'No AI predictions available.'}
+
+Report ID: ${report.id}
+Created By: ${report.created_by}
+Generated At: ${new Date(report.generated_at).toLocaleString()}
+      `.trim();
+
+      // Create and download the file
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Complete",
+        description: `Report "${report.name}" has been downloaded successfully.`,
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the report. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDelete = (reportId: string) => {
@@ -258,14 +309,14 @@ const Reports = () => {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => handleEdit(report.id)}
+                              onClick={() => handleEdit(report.id, report.name)}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => handleDownload(report.id, report.name)}
+                              onClick={() => handleDownload(report)}
                             >
                               <Download className="w-4 h-4" />
                             </Button>

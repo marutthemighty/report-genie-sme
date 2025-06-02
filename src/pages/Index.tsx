@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -203,7 +204,7 @@ const Index = () => {
         </Card>
       </div>
 
-      {/* Charts and Data Import - Fixed layout */}
+      {/* Charts and Data Import */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

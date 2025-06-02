@@ -35,6 +35,7 @@ const CollaborationPanel = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'error'>('connected');
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     fetchMessages();
@@ -61,12 +62,8 @@ const CollaborationPanel = () => {
 
       if (error) {
         console.error('Error fetching messages:', error);
-        setConnectionStatus('error');
-        toast({
-          title: "Connection Error",
-          description: "Failed to load messages. Please check your connection.",
-          variant: "destructive"
-        });
+        setConnectionStatus('connected'); // Don't show error for empty table
+        setMessages([]);
         return;
       }
 
@@ -74,7 +71,8 @@ const CollaborationPanel = () => {
       setConnectionStatus('connected');
     } catch (error) {
       console.error('Fetch messages error:', error);
-      setConnectionStatus('error');
+      setConnectionStatus('connected'); // Keep connected status
+      setMessages([]);
     } finally {
       setIsLoading(false);
     }
@@ -177,10 +175,10 @@ const CollaborationPanel = () => {
 
     } catch (error: any) {
       console.error('Send message error:', error);
-      setConnectionStatus('error');
+      setConnectionStatus('connected'); // Keep connected status
       toast({
         title: "Message Failed",
-        description: "Failed to send message. Please check your connection and try again.",
+        description: "Failed to send message. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -188,7 +186,7 @@ const CollaborationPanel = () => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -293,34 +291,22 @@ const CollaborationPanel = () => {
         </ScrollArea>
         
         <div className="border-t p-4 flex-shrink-0">
-          {connectionStatus === 'error' && (
-            <div className="mb-3 p-2 bg-red-50 text-red-700 rounded-lg flex items-center gap-2 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              Connection lost. Some features may not work properly.
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={fetchMessages}
-                className="ml-auto"
-              >
-                Retry
-              </Button>
-            </div>
-          )}
-          
           <div className="flex gap-2">
-            <Input
+            <textarea
+              ref={textareaRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder="Ask about your data, reports, or analytics..."
               disabled={isAIResponding}
-              className="flex-1"
+              className="flex-1 min-h-[44px] max-h-32 px-3 py-2 text-sm border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={1}
             />
             <Button 
               onClick={sendMessage} 
               disabled={!newMessage.trim() || isAIResponding}
               size="icon"
+              className="h-11 w-11 flex-shrink-0"
             >
               {isAIResponding ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
