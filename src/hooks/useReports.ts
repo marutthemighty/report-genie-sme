@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +18,8 @@ export interface Report {
   ai_prediction?: string;
   template_layout?: any;
   generated_at: string;
+  html_content?: string;
+  dataset_info?: any;
 }
 
 export const useReports = () => {
@@ -108,10 +111,10 @@ export const useReports = () => {
       // Create report payload
       const reportPayload = {
         name: reportData.name || 'Untitled Report',
-        report_type: reportData.type || 'General Analysis',
-        data_source: reportData.dataSource || 'Manual Input',
-        date_range: reportData.dateRange || 'Last 30 Days',
-        status: 'Generated',
+        report_type: reportData.type || reportData.report_type || 'General Analysis',
+        data_source: reportData.dataSource || reportData.data_source || 'Manual Input',
+        date_range: reportData.dateRange || reportData.date_range || 'Last 30 Days',
+        status: 'Generating',
         created_by: user.id,
         generated_at: new Date().toISOString()
       };
@@ -135,16 +138,58 @@ export const useReports = () => {
 
       console.log('Report created successfully:', data);
       
-      // Generate AI content based on report type
-      const aiSummary = generateAISummary(reportPayload);
-      const aiPrediction = generateAIPrediction(reportPayload);
+      // Generate professional PDF report with dataset analysis
+      let htmlContent = '';
+      let aiSummary = '';
+      let aiPrediction = '';
 
-      // Update the report with AI content
+      try {
+        console.log('Generating professional report...');
+        
+        // Prepare CSV data if uploaded file exists
+        let csvData = '';
+        if (reportData.uploadedFile && reportData.uploadedFile.content) {
+          csvData = reportData.uploadedFile.content;
+        }
+
+        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-report-pdf', {
+          body: { 
+            reportData: { ...reportPayload, id: data.id },
+            csvData: csvData
+          }
+        });
+
+        if (pdfError) {
+          console.error('PDF generation error:', pdfError);
+          // Continue with basic report generation
+          aiSummary = generateAISummary(reportPayload);
+          aiPrediction = generateAIPrediction(reportPayload);
+        } else {
+          htmlContent = pdfData.htmlContent || '';
+          aiSummary = pdfData.analysis || generateAISummary(reportPayload);
+          aiPrediction = generateAIPrediction(reportPayload);
+        }
+
+      } catch (pdfError) {
+        console.error('Error generating PDF report:', pdfError);
+        // Fallback to basic generation
+        aiSummary = generateAISummary(reportPayload);
+        aiPrediction = generateAIPrediction(reportPayload);
+      }
+
+      // Update the report with generated content
       const { error: updateError } = await supabase
         .from('reports')
         .update({
           ai_summary: aiSummary,
-          ai_prediction: aiPrediction
+          ai_prediction: aiPrediction,
+          html_content: htmlContent,
+          status: 'Generated',
+          dataset_info: reportData.uploadedFile ? {
+            fileName: reportData.uploadedFile.name,
+            fileSize: reportData.uploadedFile.size,
+            fileType: reportData.uploadedFile.type
+          } : null
         })
         .eq('id', data.id);
 
@@ -155,14 +200,16 @@ export const useReports = () => {
       const updatedData = {
         ...data,
         ai_summary: aiSummary,
-        ai_prediction: aiPrediction
+        ai_prediction: aiPrediction,
+        html_content: htmlContent,
+        status: 'Generated'
       };
 
       setReports(prev => [updatedData, ...prev]);
       
       toast({
-        title: "Report Created",
-        description: `${reportPayload.name} has been generated successfully.`,
+        title: "Report Generated Successfully",
+        description: `${reportPayload.name} has been created with professional analysis.`,
       });
       
       return updatedData;

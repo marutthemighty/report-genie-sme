@@ -31,10 +31,17 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
     'Instagram', 'Amazon', 'BigCommerce', 'Etsy', 'Square', 'Manual Upload'
   ];
 
+  // Complete list of all 9 report types
   const reportTypes = [
-    'Sales Performance', 'Cart Abandonment', 'Product Performance', 
-    'Customer Acquisition', 'Marketing RoI', 'Inventory Trends', 
-    'Customer Retention', 'Revenue Forecast', 'Traffic Analytics'
+    'Sales Performance', 
+    'Cart Abandonment', 
+    'Product Performance', 
+    'Customer Acquisition', 
+    'Marketing RoI', 
+    'Inventory Trends', 
+    'Customer Retention', 
+    'Revenue Forecast', 
+    'Traffic Analytics'
   ];
 
   const dateRanges = [
@@ -52,45 +59,66 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
     }
   };
 
+  const processFileContent = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        resolve(content);
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const reportData = {
-      name: reportName,
-      dataSource,
-      type: reportType,
-      dateRange,
-      customStartDate,
-      customEndDate,
-      uploadedFile: uploadedFile ? {
-        name: uploadedFile.name,
-        size: uploadedFile.size,
-        type: uploadedFile.type
-      } : null
-    };
+    try {
+      let fileContent = '';
+      let fileInfo = null;
 
-    if (onSubmit) {
-      onSubmit(reportData);
+      if (uploadedFile) {
+        fileContent = await processFileContent(uploadedFile);
+        fileInfo = {
+          name: uploadedFile.name,
+          size: uploadedFile.size,
+          type: uploadedFile.type,
+          content: fileContent
+        };
+      }
+
+      const reportData = {
+        name: reportName,
+        dataSource,
+        type: reportType,
+        dateRange,
+        customStartDate,
+        customEndDate,
+        uploadedFile: fileInfo
+      };
+
+      if (onSubmit) {
+        await onSubmit(reportData);
+      }
+      
+      // Reset form
+      setReportName('');
+      setDataSource('');
+      setReportType('');
+      setDateRange('');
+      setUploadedFile(null);
+      setCustomStartDate(undefined);
+      setCustomEndDate(undefined);
+      
+      onClose();
+      
+    } catch (error) {
+      console.error('Error creating report:', error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
-    
-    // Reset form
-    setReportName('');
-    setDataSource('');
-    setReportType('');
-    setDateRange('');
-    setUploadedFile(null);
-    setCustomStartDate(undefined);
-    setCustomEndDate(undefined);
-    
-    onClose();
-    
-    console.log('Creating report:', reportData);
   };
 
   const isFormValid = reportName && dataSource && reportType && dateRange;
@@ -135,14 +163,14 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
             </Select>
           </div>
 
-          {/* Optional File Upload */}
+          {/* Dataset Upload */}
           <div className="space-y-2">
-            <Label>Dataset Upload (Optional)</Label>
+            <Label>Dataset Upload (Recommended for detailed analysis)</Label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
               <div className="text-center">
                 <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
                 <p className="text-sm text-gray-600 mb-3">
-                  Upload CSV, Excel, or JSON files for custom analysis
+                  Upload CSV, Excel, or JSON files for comprehensive AI analysis
                 </p>
                 <input
                   type="file"
@@ -153,18 +181,26 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
                 />
                 <label
                   htmlFor="dataset-upload"
-                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md cursor-pointer bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
                 >
                   <FileText className="w-4 h-4 mr-2" />
-                  Choose File
+                  Choose Dataset File
                 </label>
                 {uploadedFile && (
-                  <div className="mt-2 text-sm text-green-600">
-                    ✓ {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <div className="text-sm text-green-700 font-medium">
+                      ✓ {uploadedFile.name}
+                    </div>
+                    <div className="text-xs text-green-600">
+                      {(uploadedFile.size / 1024).toFixed(1)} KB • Ready for AI analysis
+                    </div>
                   </div>
                 )}
               </div>
             </div>
+            <p className="text-xs text-gray-500">
+              Pro tip: Upload your actual data for personalized insights and professional PDF reports
+            </p>
           </div>
 
           {/* Report Type */}
@@ -256,33 +292,29 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
                 AI Analysis Preview
               </h4>
               <p className="text-sm text-blue-700">
-                {reportType === 'Sales Performance' && 
-                  "AI will analyze revenue trends, identify top-performing products, and provide growth recommendations."
-                }
-                {reportType === 'Cart Abandonment' && 
-                  "AI will identify abandonment patterns, suggest optimization strategies, and predict recovery opportunities."
-                }
-                {reportType === 'Product Performance' && 
-                  "AI will evaluate product metrics, identify bestsellers, and recommend inventory optimizations."
-                }
-                {reportType === 'Customer Acquisition' && 
-                  "AI will analyze acquisition channels, calculate customer lifetime value, and optimize marketing spend."
-                }
-                {reportType === 'Marketing RoI' && 
-                  "AI will measure campaign effectiveness, attribution analysis, and budget optimization recommendations."
-                }
-                {reportType === 'Inventory Trends' && 
-                  "AI will forecast demand, identify slow-moving stock, and optimize inventory management."
-                }
-                {reportType === 'Customer Retention' && 
-                  "AI will analyze churn patterns, identify at-risk customers, and recommend retention strategies."
-                }
-                {reportType === 'Revenue Forecast' && 
-                  "AI will predict future revenue trends, seasonal patterns, and growth opportunities."
-                }
-                {reportType === 'Traffic Analytics' && 
-                  "AI will analyze user behavior, conversion paths, and website optimization opportunities."
-                }
+                {uploadedFile ? (
+                  `AI will thoroughly analyze your uploaded dataset (${uploadedFile.name}) for ${reportType.toLowerCase()}, providing detailed insights, statistical analysis, and professional recommendations in a comprehensive PDF report.`
+                ) : (
+                  reportType === 'Sales Performance' ? 
+                    "AI will analyze revenue trends, identify top-performing products, and provide growth recommendations." :
+                  reportType === 'Cart Abandonment' ? 
+                    "AI will identify abandonment patterns, suggest optimization strategies, and predict recovery opportunities." :
+                  reportType === 'Product Performance' ? 
+                    "AI will evaluate product metrics, identify bestsellers, and recommend inventory optimizations." :
+                  reportType === 'Customer Acquisition' ? 
+                    "AI will analyze acquisition channels, calculate customer lifetime value, and optimize marketing spend." :
+                  reportType === 'Marketing RoI' ? 
+                    "AI will measure campaign effectiveness, attribution analysis, and budget optimization recommendations." :
+                  reportType === 'Inventory Trends' ? 
+                    "AI will forecast demand, identify slow-moving stock, and optimize inventory management." :
+                  reportType === 'Customer Retention' ? 
+                    "AI will analyze churn patterns, identify at-risk customers, and recommend retention strategies." :
+                  reportType === 'Revenue Forecast' ? 
+                    "AI will predict future revenue trends, seasonal patterns, and growth opportunities." :
+                  reportType === 'Traffic Analytics' ? 
+                    "AI will analyze user behavior, conversion paths, and website optimization opportunities." :
+                    "AI will provide comprehensive analysis and actionable insights for your business."
+                )}
               </p>
             </div>
           )}
@@ -300,7 +332,7 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Generating...
+                  Generating Professional Report...
                 </>
               ) : (
                 <>

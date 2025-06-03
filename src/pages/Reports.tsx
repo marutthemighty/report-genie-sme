@@ -36,6 +36,7 @@ const Reports = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedReportHtml, setSelectedReportHtml] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -85,8 +86,18 @@ const Reports = () => {
 
   const handleDownload = (report: any) => {
     try {
-      // Create comprehensive report content
-      const reportContent = `
+      let content = '';
+      let fileName = '';
+      let mimeType = '';
+
+      if (report.html_content) {
+        // Download as HTML for professional viewing
+        content = report.html_content;
+        fileName = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_professional_report.html`;
+        mimeType = 'text/html';
+      } else {
+        // Fallback to text format
+        content = `
 ${report.name}
 Generated on: ${new Date(report.created_at).toLocaleDateString()}
 
@@ -104,14 +115,17 @@ ${report.ai_prediction || 'No AI predictions available.'}
 Report ID: ${report.id}
 Created By: ${report.created_by}
 Generated At: ${new Date(report.generated_at).toLocaleString()}
-      `.trim();
+        `.trim();
+        fileName = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.txt`;
+        mimeType = 'text/plain';
+      }
 
       // Create and download the file
-      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.txt`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -119,7 +133,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
 
       toast({
         title: "Download Complete",
-        description: `Report "${report.name}" has been downloaded successfully.`,
+        description: `Professional report "${report.name}" has been downloaded.`,
       });
     } catch (error) {
       console.error('Download error:', error);
@@ -230,7 +244,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
               <FileText className="w-6 h-6 text-gray-600 dark:text-gray-300" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports</h1>
-                <p className="text-gray-600 dark:text-gray-300">Manage and view your AI-generated reports</p>
+                <p className="text-gray-600 dark:text-gray-300">Manage and view your AI-generated professional reports</p>
               </div>
             </div>
             <Button 
@@ -277,6 +291,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="generated">Generated</SelectItem>
+                      <SelectItem value="generating">Generating</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="failed">Failed</SelectItem>
                     </SelectContent>
@@ -317,7 +332,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
           {/* Reports Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Reports ({filteredReports.length})</CardTitle>
+              <CardTitle>Professional Reports ({filteredReports.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {filteredReports.length === 0 ? (
@@ -327,7 +342,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                     No reports found
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    Get started by creating your first report.
+                    Get started by creating your first professional AI report.
                   </p>
                   <Button onClick={() => setIsCreateModalOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" />
@@ -364,7 +379,16 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                   <TableBody>
                     {filteredReports.map((report) => (
                       <TableRow key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <TableCell className="font-medium">{report.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <div>
+                            <div>{report.name}</div>
+                            {report.dataset_info && (
+                              <div className="text-xs text-green-600">
+                                📊 Dataset: {report.dataset_info.fileName}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">{report.report_type}</Badge>
                         </TableCell>
@@ -377,6 +401,16 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                         <TableCell>{new Date(report.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            {report.html_content && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleViewReport(report)}
+                                title="View Professional Report"
+                              >
+                                <TrendingUp className="w-4 h-4" />
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -419,6 +453,27 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
         onClose={() => setIsCreateModalOpen(false)} 
         onSubmit={handleCreateReport}
       />
+
+      {/* Professional Report Viewer Modal */}
+      {selectedReportHtml && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto w-full">
+            <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Professional Report Preview</h3>
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedReportHtml(null)}
+              >
+                Close
+              </Button>
+            </div>
+            <div 
+              className="p-4"
+              dangerouslySetInnerHTML={{ __html: selectedReportHtml }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

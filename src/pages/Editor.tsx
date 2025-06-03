@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +39,19 @@ const Editor = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Complete list of all 9 report types - matching CreateReportModal and Reports page
+  const reportTypes = [
+    'Sales Performance',
+    'Cart Abandonment', 
+    'Product Performance',
+    'Customer Acquisition',
+    'Marketing RoI',
+    'Inventory Trends',
+    'Customer Retention',
+    'Revenue Forecast',
+    'Traffic Analytics'
+  ];
 
   useEffect(() => {
     if (reportId) {
@@ -226,12 +240,9 @@ const Editor = () => {
                         <SelectValue placeholder="Select report type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Sales Analysis">Sales Analysis</SelectItem>
-                        <SelectItem value="Customer Insights">Customer Insights</SelectItem>
-                        <SelectItem value="Performance Trends">Performance Trends</SelectItem>
-                        <SelectItem value="Financial Report">Financial Report</SelectItem>
-                        <SelectItem value="Marketing Analytics">Marketing Analytics</SelectItem>
-                        <SelectItem value="Custom Analysis">Custom Analysis</SelectItem>
+                        {reportTypes.map((type) => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
