@@ -84,6 +84,18 @@ const Reports = () => {
     navigate(`/editor?id=${reportId}`);
   };
 
+  const handleViewReport = (report: any) => {
+    if (report.html_content) {
+      setSelectedReportHtml(report.html_content);
+    } else {
+      toast({
+        title: "No Professional Report Available",
+        description: "This report doesn't have a professional HTML version available.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleDownload = (report: any) => {
     try {
       let content = '';

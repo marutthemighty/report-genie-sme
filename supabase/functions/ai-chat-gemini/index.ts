@@ -14,12 +14,14 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { message } = await req.json();
     const geminiApiKey = Deno.env.get('GOOGLE_GEMINI_API_KEY');
 
     if (!geminiApiKey) {
       throw new Error('Google Gemini API key not configured');
     }
+
+    console.log('Processing AI chat request:', message);
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
@@ -29,7 +31,9 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `You are a helpful AI assistant for an analytics platform. The user is asking: "${prompt}". Please provide helpful, concise advice about data analysis, business insights, or general assistance with their analytics needs.`
+            text: `You are a helpful AI assistant specialized in business analytics and data insights. Please provide helpful, professional responses to the user's questions about their business data, reports, and analytics.
+
+User message: ${message}`
           }]
         }],
         generationConfig: {
@@ -43,29 +47,24 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', errorText);
-      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+      console.error('Gemini API error:', response.status, errorText);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Gemini response:', data);
-    
-    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I apologize, but I encountered an issue generating a response. Please try again.';
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I apologize, but I could not generate a response at this time.';
 
-    return new Response(JSON.stringify({ 
-      content: generatedText,
-      user_id: 'ai-assistant',
-      is_ai: true 
-    }), {
+    console.log('AI response generated successfully');
+
+    return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     console.error('Error in ai-chat-gemini function:', error);
     return new Response(JSON.stringify({ 
-      error: error.message,
-      content: 'I encountered an issue processing your request. Please try again.',
-      user_id: 'ai-assistant',
-      is_ai: true 
+      error: error.message || 'Failed to process AI chat request',
+      reply: 'I apologize, but I encountered an error while processing your request. Please try again.'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -1,294 +1,220 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarInitials } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { Send, Bot, User, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  MessageSquare, 
-  Send, 
-  Bot, 
-  User, 
-  Clock,
-  Loader2
-} from 'lucide-react';
 
 interface Message {
   id: string;
   content: string;
-  user_id: string;
-  is_ai: boolean;
-  created_at: string;
-  updated_at: string;
+  isAi: boolean;
+  timestamp: Date;
 }
 
 const CollaborationPanel = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      content: 'Hello! I\'m your AI assistant. I can help you analyze your data, create reports, and provide business insights. What would you like to know?',
+      isAi: true,
+      timestamp: new Date()
+    }
+  ]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isAIResponding, setIsAIResponding] = useState(false);
-  const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchMessages = async () => {
-    try {
-      setIsLoading(true);
-      
-      const { data, error } = await supabase
-        .from('collaboration_comments')
-        .select('*')
-        .order('created_at', { ascending: true })
-        .limit(50);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching messages:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load messages. Please try again.",
-          variant: "destructive"
-        });
-        return;
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: newMessage,
+      isAi: false,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setNewMessage('');
+    setIsLoading(true);
+
+    try {
+      console.log('Sending message to AI:', newMessage);
+      
+      const { data, error } = await supabase.functions.invoke('ai-chat-gemini', {
+        body: { message: newMessage }
+      });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(`AI service error: ${error.message}`);
       }
 
-      setMessages(data || []);
+      if (!data || !data.reply) {
+        console.error('No reply from AI service:', data);
+        throw new Error('No response received from AI service');
+      }
+
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: data.reply,
+        isAi: true,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+      console.log('AI response received successfully');
+
     } catch (error) {
-      console.error('Fetch messages error:', error);
-      setMessages([]);
+      console.error('Error sending message:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: 'I apologize, but I\'m experiencing technical difficulties right now. Please try again in a moment, or check if the AI service is properly configured.',
+        isAi: true,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+      
+      toast({
+        title: "AI Assistant Error",
+        description: error instanceof Error ? error.message : "Failed to get AI response. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || isAIResponding) return;
-
-    const messageContent = newMessage.trim();
-    setNewMessage('');
-
-    try {
-      // Add user message to database
-      const { data: userMessage, error: userError } = await supabase
-        .from('collaboration_comments')
-        .insert([{
-          content: messageContent,
-          user_id: `user-${Date.now()}`,
-          is_ai: false
-        }])
-        .select()
-        .single();
-
-      if (userError) {
-        console.error('Error saving user message:', userError);
-        throw userError;
-      }
-
-      // Update local state immediately
-      setMessages(prev => [...prev, userMessage]);
-      setIsAIResponding(true);
-
-      // Call the Gemini AI function
-      const { data: aiResponseData, error: aiError } = await supabase.functions.invoke('ai-chat-gemini', {
-        body: { prompt: messageContent }
-      });
-
-      if (aiError) {
-        console.error('AI function error:', aiError);
-        throw new Error('Failed to get AI response');
-      }
-
-      // Save AI response to database
-      const { data: aiMessage, error: saveError } = await supabase
-        .from('collaboration_comments')
-        .insert([{
-          content: aiResponseData.content || 'I apologize, but I encountered an issue. Please try again.',
-          user_id: 'ai-assistant',
-          is_ai: true
-        }])
-        .select()
-        .single();
-
-      if (saveError) {
-        console.error('Error saving AI message:', saveError);
-        throw saveError;
-      }
-
-      setMessages(prev => [...prev, aiMessage]);
-
-    } catch (error: any) {
-      console.error('Send message error:', error);
-      
-      const errorMessage = 'I encountered an issue processing your request. Please try again.';
-
-      try {
-        const { data: errorAiMessage } = await supabase
-          .from('collaboration_comments')
-          .insert([{
-            content: errorMessage,
-            user_id: 'ai-assistant',
-            is_ai: true
-          }])
-          .select()
-          .single();
-
-        if (errorAiMessage) {
-          setMessages(prev => [...prev, errorAiMessage]);
-        }
-      } catch (dbError) {
-        console.error('Error saving error message:', dbError);
-      }
-
-      toast({
-        title: "AI Assistant Error",
-        description: "Failed to get AI response. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsAIResponding(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
 
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex-shrink-0">
+    <Card className="h-[600px] flex flex-col">
+      <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="w-5 h-5" />
-          AI Assistant
+          AI Business Assistant
         </CardTitle>
-        <p className="text-sm text-gray-600">
-          Ask questions about your data, get insights, or request analysis recommendations.
-        </p>
       </CardHeader>
-      
-      <CardContent className="flex-1 flex flex-col p-0">
-        <ScrollArea className="flex-1 p-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="w-6 h-6 animate-spin" />
-              <span className="ml-2">Loading messages...</span>
+      <CardContent className="flex-1 flex flex-col gap-4 p-4">
+        {/* Messages Container */}
+        <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-gray-50 rounded-lg">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex gap-3 ${message.isAi ? 'justify-start' : 'justify-end'}`}
+            >
+              {message.isAi && (
+                <Avatar className="w-8 h-8 bg-blue-100">
+                  <AvatarFallback>
+                    <Bot className="w-4 h-4 text-blue-600" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <div
+                className={`max-w-[80%] p-3 rounded-lg ${
+                  message.isAi
+                    ? 'bg-white border border-gray-200'
+                    : 'bg-blue-600 text-white'
+                }`}
+              >
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <p className={`text-xs mt-1 ${message.isAi ? 'text-gray-500' : 'text-blue-100'}`}>
+                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+              {!message.isAi && (
+                <Avatar className="w-8 h-8 bg-green-100">
+                  <AvatarFallback>
+                    <User className="w-4 h-4 text-green-600" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
             </div>
-          ) : messages.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              <Bot className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-lg font-medium mb-2">Start a conversation</p>
-              <p className="text-sm">Ask me anything about your analytics, reports, or data insights!</p>
-              <div className="mt-4 space-y-2 text-xs text-gray-400">
-                <p>• "How can I improve my conversion rate?"</p>
-                <p>• "What trends should I look for in my data?"</p>
-                <p>• "Help me understand customer segmentation"</p>
+          ))}
+          {isLoading && (
+            <div className="flex gap-3 justify-start">
+              <Avatar className="w-8 h-8 bg-blue-100">
+                <AvatarFallback>
+                  <Bot className="w-4 h-4 text-blue-600" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="bg-white border border-gray-200 p-3 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex items-start gap-3 ${
-                    message.is_ai ? 'flex-row' : 'flex-row-reverse'
-                  }`}
-                >
-                  <Avatar className="w-8 h-8 flex-shrink-0">
-                    <AvatarFallback className={message.is_ai ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}>
-                      {message.is_ai ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className={`flex-1 ${message.is_ai ? 'text-left' : 'text-right'}`}>
-                    <div
-                      className={`inline-block max-w-[80%] p-3 rounded-lg ${
-                        message.is_ai
-                          ? 'bg-blue-50 text-blue-900'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
-                      <Clock className="w-3 h-3" />
-                      {formatTime(message.created_at)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {isAIResponding && (
-                <div className="flex items-start gap-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-blue-100 text-blue-600">
-                      <Bot className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="bg-blue-50 text-blue-900 p-3 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">AI is thinking...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
           )}
-        </ScrollArea>
-        
-        <div className="border-t p-4 flex-shrink-0">
-          <div className="flex gap-2">
-            <textarea
-              ref={textareaRef}
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Ask about your data, reports, or analytics..."
-              disabled={isAIResponding}
-              className="flex-1 min-h-[44px] max-h-32 px-3 py-2 text-sm border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-              rows={1}
-            />
-            <Button 
-              onClick={sendMessage} 
-              disabled={!newMessage.trim() || isAIResponding}
-              size="icon"
-              className="h-11 w-11 flex-shrink-0"
-            >
-              {isAIResponding ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-          
-          <p className="text-xs text-gray-500 mt-2">
-            Press Enter to send • Shift+Enter for new line
-          </p>
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Message Input */}
+        <div className="flex gap-2">
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask me about your data, reports, or business insights..."
+            disabled={isLoading}
+            className="flex-1"
+          />
+          <Button
+            onClick={sendMessage}
+            disabled={!newMessage.trim() || isLoading}
+            size="icon"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setNewMessage("What insights can you provide about my latest reports?")}
+            disabled={isLoading}
+          >
+            Report Insights
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setNewMessage("How can I improve my business performance?")}
+            disabled={isLoading}
+          >
+            Performance Tips
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setNewMessage("Analyze my data trends")}
+            disabled={isLoading}
+          >
+            Data Analysis
+          </Button>
         </div>
       </CardContent>
     </Card>

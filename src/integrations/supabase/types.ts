@@ -660,8 +660,10 @@ export type Database = {
           created_at: string | null
           created_by: string
           data_source: string
+          dataset_info: Json | null
           date_range: string
           generated_at: string
+          html_content: string | null
           id: string
           name: string
           report_type: string
@@ -675,8 +677,10 @@ export type Database = {
           created_at?: string | null
           created_by: string
           data_source: string
+          dataset_info?: Json | null
           date_range: string
           generated_at: string
+          html_content?: string | null
           id?: string
           name: string
           report_type: string
@@ -690,8 +694,10 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           data_source?: string
+          dataset_info?: Json | null
           date_range?: string
           generated_at?: string
+          html_content?: string | null
           id?: string
           name?: string
           report_type?: string
