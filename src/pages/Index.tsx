@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from '@/hooks/use-toast';
 import { useReports } from '@/hooks/useReports';
-import { CollaborationPanel } from '@/components/CollaborationPanel';
+import CollaborationPanel from '@/components/CollaborationPanel';
 import Sidebar from '@/components/Sidebar';
 import CreateReportModal from '@/components/CreateReportModal';
 import {
@@ -24,7 +25,9 @@ import {
   Line,
   PieChart,
   Pie,
-  Cell,
+  Cell
+} from 'recharts';
+import {
   FileText,
   TrendingUp,
   SlidersHorizontal,
