@@ -101,64 +101,63 @@ const CollaborationPanel = () => {
       setMessages(prev => [...prev, userMessage]);
       setIsAIResponding(true);
 
-      // Simple AI response simulation
-      setTimeout(async () => {
-        try {
-          const aiResponse = `I understand you're asking about "${messageContent}". Based on your analytics data, I'd recommend focusing on improving user engagement metrics and optimizing your conversion funnel. Would you like me to analyze specific data points for you?`;
+      // Call the Gemini AI function
+      const { data: aiResponseData, error: aiError } = await supabase.functions.invoke('ai-chat-gemini', {
+        body: { prompt: messageContent }
+      });
 
-          const { data: aiMessage, error: aiError } = await supabase
-            .from('collaboration_comments')
-            .insert([{
-              content: aiResponse,
-              user_id: 'ai-assistant',
-              is_ai: true
-            }])
-            .select()
-            .single();
+      if (aiError) {
+        console.error('AI function error:', aiError);
+        throw new Error('Failed to get AI response');
+      }
 
-          if (aiError) {
-            console.error('Error saving AI message:', aiError);
-            throw aiError;
-          }
+      // Save AI response to database
+      const { data: aiMessage, error: saveError } = await supabase
+        .from('collaboration_comments')
+        .insert([{
+          content: aiResponseData.content || 'I apologize, but I encountered an issue. Please try again.',
+          user_id: 'ai-assistant',
+          is_ai: true
+        }])
+        .select()
+        .single();
 
-          setMessages(prev => [...prev, aiMessage]);
+      if (saveError) {
+        console.error('Error saving AI message:', saveError);
+        throw saveError;
+      }
 
-        } catch (aiError: any) {
-          console.error('AI response error:', aiError);
-          
-          const errorMessage = 'I encountered an issue processing your request. Please try again.';
-
-          const { data: errorAiMessage } = await supabase
-            .from('collaboration_comments')
-            .insert([{
-              content: errorMessage,
-              user_id: 'ai-assistant',
-              is_ai: true
-            }])
-            .select()
-            .single();
-
-          if (errorAiMessage) {
-            setMessages(prev => [...prev, errorAiMessage]);
-          }
-
-          toast({
-            title: "AI Assistant Error",
-            description: errorMessage,
-            variant: "destructive"
-          });
-        } finally {
-          setIsAIResponding(false);
-        }
-      }, 1500);
+      setMessages(prev => [...prev, aiMessage]);
 
     } catch (error: any) {
       console.error('Send message error:', error);
+      
+      const errorMessage = 'I encountered an issue processing your request. Please try again.';
+
+      try {
+        const { data: errorAiMessage } = await supabase
+          .from('collaboration_comments')
+          .insert([{
+            content: errorMessage,
+            user_id: 'ai-assistant',
+            is_ai: true
+          }])
+          .select()
+          .single();
+
+        if (errorAiMessage) {
+          setMessages(prev => [...prev, errorAiMessage]);
+        }
+      } catch (dbError) {
+        console.error('Error saving error message:', dbError);
+      }
+
       toast({
-        title: "Message Failed",
-        description: "Failed to send message. Please try again.",
+        title: "AI Assistant Error",
+        description: "Failed to get AI response. Please try again.",
         variant: "destructive"
       });
+    } finally {
       setIsAIResponding(false);
     }
   };
@@ -184,6 +183,9 @@ const CollaborationPanel = () => {
           <MessageSquare className="w-5 h-5" />
           AI Assistant
         </CardTitle>
+        <p className="text-sm text-gray-600">
+          Ask questions about your data, get insights, or request analysis recommendations.
+        </p>
       </CardHeader>
       
       <CardContent className="flex-1 flex flex-col p-0">
@@ -198,6 +200,11 @@ const CollaborationPanel = () => {
               <Bot className="w-12 h-12 mx-auto mb-4 text-gray-400" />
               <p className="text-lg font-medium mb-2">Start a conversation</p>
               <p className="text-sm">Ask me anything about your analytics, reports, or data insights!</p>
+              <div className="mt-4 space-y-2 text-xs text-gray-400">
+                <p>• "How can I improve my conversion rate?"</p>
+                <p>• "What trends should I look for in my data?"</p>
+                <p>• "Help me understand customer segmentation"</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

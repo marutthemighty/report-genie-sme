@@ -41,6 +41,19 @@ const Reports = () => {
   
   const { reports, loading, createReport, deleteReport } = useReports();
 
+  // Complete list of all 9 report types
+  const allReportTypes = [
+    'Sales Performance',
+    'Cart Abandonment', 
+    'Product Performance',
+    'Customer Acquisition',
+    'Marketing RoI',
+    'Inventory Trends',
+    'Customer Retention',
+    'Revenue Forecast',
+    'Traffic Analytics'
+  ];
+
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          report.report_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -278,11 +291,9 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="Sales Performance">Sales Performance</SelectItem>
-                      <SelectItem value="Traffic Analytics">Traffic Analytics</SelectItem>
-                      <SelectItem value="Product Performance">Product Performance</SelectItem>
-                      <SelectItem value="Cart Abandonment">Cart Abandonment</SelectItem>
-                      <SelectItem value="Customer Retention">Customer Retention</SelectItem>
+                      {allReportTypes.map((type) => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

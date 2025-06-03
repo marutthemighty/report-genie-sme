@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +11,7 @@ import { useReports } from '@/hooks/useReports';
 import CollaborationPanel from '@/components/CollaborationPanel';
 import Sidebar from '@/components/Sidebar';
 import CreateReportModal from '@/components/CreateReportModal';
+import DataImportPanel from '@/components/DataImportPanel';
 import {
   BarChart,
   Bar,
@@ -54,6 +54,7 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editReport, setEditReport] = useState(null);
   const [reportName, setReportName] = useState('');
+  const [analysisResults, setAnalysisResults] = useState(null);
 
   useEffect(() => {
     // Check if the location state contains the 'openCreateModal' flag
@@ -134,6 +135,15 @@ const Index = () => {
     }
   };
 
+  const handleAnalysisComplete = (results: any) => {
+    setAnalysisResults(results);
+    setActiveTab('ai-preview');
+    toast({
+      title: "Analysis Complete",
+      description: "Your data analysis is ready for review.",
+    });
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar onCreateReport={() => setIsCreateModalOpen(true)} />
@@ -160,12 +170,12 @@ const Index = () => {
         </div>
 
         <div className="p-6">
-          <Tabs defaultValue="overview" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="data-import">Data Import</TabsTrigger>
-              <TabsTrigger value="ai-preview">AI Preview</TabsTrigger>
-              <TabsTrigger value="collaboration">Collaboration</TabsTrigger>
+              <TabsTrigger value="data-analysis">Data Analysis</TabsTrigger>
+              <TabsTrigger value="ai-preview">AI Insights</TabsTrigger>
+              <TabsTrigger value="collaboration">AI Assistant</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -354,26 +364,8 @@ const Index = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="data-import" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <SlidersHorizontal className="w-5 h-5" />
-                    Data Import Configuration
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="dataSource">Data Source</Label>
-                    <Input id="dataSource" placeholder="Enter data source URL" />
-                  </div>
-                  <div>
-                    <Label htmlFor="apiKey">API Key</Label>
-                    <Input id="apiKey" type="password" placeholder="Enter API Key" />
-                  </div>
-                  <Button>Import Data</Button>
-                </CardContent>
-              </Card>
+            <TabsContent value="data-analysis" className="space-y-6">
+              <DataImportPanel onAnalysisComplete={handleAnalysisComplete} />
             </TabsContent>
 
             <TabsContent value="ai-preview" className="space-y-6">
@@ -381,28 +373,56 @@ const Index = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BrainCircuit className="w-5 h-5" />
-                    AI Report Preview
+                    AI Insights & Analysis
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="aiSummary">AI Summary</Label>
-                    <Textarea
-                      id="aiSummary"
-                      placeholder="AI-generated summary will appear here..."
-                      rows={4}
-                      className="resize-none"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="aiPredictions">AI Predictions</Label>
-                    <Textarea
-                      id="aiPredictions"
-                      placeholder="AI predictions and recommendations will appear here..."
-                      rows={4}
-                      className="resize-none"
-                    />
-                  </div>
+                  {analysisResults ? (
+                    <div className="space-y-6">
+                      <div>
+                        <Label className="text-lg font-semibold">Analysis Summary</Label>
+                        <div className="mt-2 p-4 bg-blue-50 rounded-lg">
+                          <p className="text-gray-700">{analysisResults.summary}</p>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-lg font-semibold">Key Metrics</Label>
+                        <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {analysisResults.keyMetrics?.map((metric: any, index: number) => (
+                            <div key={index} className="p-4 bg-white border rounded-lg">
+                              <div className="text-sm text-gray-600">{metric.label}</div>
+                              <div className="text-xl font-bold">{metric.value}</div>
+                              <div className="text-sm text-green-600">{metric.change}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-lg font-semibold">AI Recommendations</Label>
+                        <div className="mt-2 space-y-2">
+                          {analysisResults.recommendations?.map((rec: string, index: number) => (
+                            <div key={index} className="p-3 bg-green-50 border-l-4 border-green-400 rounded">
+                              <p className="text-gray-700">{index + 1}. {rec}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <BrainCircuit className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Analysis Available</h3>
+                      <p className="text-gray-600 mb-4">
+                        Upload your data in the Data Analysis tab to see AI-powered insights here.
+                      </p>
+                      <Button onClick={() => setActiveTab('data-analysis')}>
+                        <Database className="w-4 h-4 mr-2" />
+                        Start Analysis
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

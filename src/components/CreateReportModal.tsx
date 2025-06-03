@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { ArrowRight, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowRight, Sparkles, Calendar as CalendarIcon, Upload, FileText } from 'lucide-react';
 
 interface CreateReportModalProps {
   isOpen: boolean;
@@ -22,11 +23,12 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
   const [dateRange, setDateRange] = useState('');
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>();
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>();
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const dataSources = [
     'Shopify', 'WooCommerce', 'Google Analytics', 'Facebook Ads', 
-    'Instagram', 'Amazon', 'BigCommerce', 'Etsy', 'Square'
+    'Instagram', 'Amazon', 'BigCommerce', 'Etsy', 'Square', 'Manual Upload'
   ];
 
   const reportTypes = [
@@ -39,6 +41,16 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
     'Last 7 Days', 'Last 30 Days', 'Last 90 Days', 
     'Last Year', 'Custom Range', 'All Time'
   ];
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      if (!dataSource) {
+        setDataSource('Manual Upload');
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +65,12 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
       type: reportType,
       dateRange,
       customStartDate,
-      customEndDate
+      customEndDate,
+      uploadedFile: uploadedFile ? {
+        name: uploadedFile.name,
+        size: uploadedFile.size,
+        type: uploadedFile.type
+      } : null
     };
 
     if (onSubmit) {
@@ -61,6 +78,16 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
     }
     
     setIsLoading(false);
+    
+    // Reset form
+    setReportName('');
+    setDataSource('');
+    setReportType('');
+    setDateRange('');
+    setUploadedFile(null);
+    setCustomStartDate(undefined);
+    setCustomEndDate(undefined);
+    
     onClose();
     
     console.log('Creating report:', reportData);
@@ -70,7 +97,7 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Sparkles className="w-6 h-6 text-blue-600" />
@@ -106,6 +133,38 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Optional File Upload */}
+          <div className="space-y-2">
+            <Label>Dataset Upload (Optional)</Label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              <div className="text-center">
+                <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                <p className="text-sm text-gray-600 mb-3">
+                  Upload CSV, Excel, or JSON files for custom analysis
+                </p>
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls,.json"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="dataset-upload"
+                />
+                <label
+                  htmlFor="dataset-upload"
+                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md cursor-pointer bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Choose File
+                </label>
+                {uploadedFile && (
+                  <div className="mt-2 text-sm text-green-600">
+                    ✓ {uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Report Type */}
@@ -206,8 +265,23 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
                 {reportType === 'Product Performance' && 
                   "AI will evaluate product metrics, identify bestsellers, and recommend inventory optimizations."
                 }
-                {!['Sales Performance', 'Cart Abandonment', 'Product Performance'].includes(reportType) &&
-                  "AI will provide intelligent insights, trend analysis, and actionable recommendations based on your data."
+                {reportType === 'Customer Acquisition' && 
+                  "AI will analyze acquisition channels, calculate customer lifetime value, and optimize marketing spend."
+                }
+                {reportType === 'Marketing RoI' && 
+                  "AI will measure campaign effectiveness, attribution analysis, and budget optimization recommendations."
+                }
+                {reportType === 'Inventory Trends' && 
+                  "AI will forecast demand, identify slow-moving stock, and optimize inventory management."
+                }
+                {reportType === 'Customer Retention' && 
+                  "AI will analyze churn patterns, identify at-risk customers, and recommend retention strategies."
+                }
+                {reportType === 'Revenue Forecast' && 
+                  "AI will predict future revenue trends, seasonal patterns, and growth opportunities."
+                }
+                {reportType === 'Traffic Analytics' && 
+                  "AI will analyze user behavior, conversion paths, and website optimization opportunities."
                 }
               </p>
             </div>
