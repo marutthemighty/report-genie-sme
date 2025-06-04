@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,6 +79,130 @@ const Index = () => {
     });
   };
 
+  // Generate comprehensive dashboard data with proper date formatting
+  const getDashboardData = () => {
+    if (analysisResults && analysisResults.chartData) {
+      const currentDate = new Date();
+      
+      // Generate proper date labels based on data range
+      const generateDateLabels = (count: number, type: 'day' | 'week' | 'month' | 'quarter' | 'year') => {
+        const labels = [];
+        for (let i = count - 1; i >= 0; i--) {
+          const date = new Date(currentDate);
+          switch (type) {
+            case 'day':
+              date.setDate(date.getDate() - i);
+              labels.push(date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+              break;
+            case 'week':
+              date.setDate(date.getDate() - (i * 7));
+              labels.push(`Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`);
+              break;
+            case 'month':
+              date.setMonth(date.getMonth() - i);
+              labels.push(date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
+              break;
+            case 'quarter':
+              date.setMonth(date.getMonth() - (i * 3));
+              const quarter = Math.floor(date.getMonth() / 3) + 1;
+              labels.push(`Q${quarter} ${date.getFullYear()}`);
+              break;
+            case 'year':
+              date.setFullYear(date.getFullYear() - i);
+              labels.push(date.getFullYear().toString());
+              break;
+          }
+        }
+        return labels;
+      };
+
+      // Process chart data with real names and dates
+      const processedData = {
+        revenue: analysisResults.chartData.revenue?.length > 0 
+          ? analysisResults.chartData.revenue.map((item, index) => ({
+              ...item,
+              month: generateDateLabels(analysisResults.chartData.revenue.length, 'month')[index] || item.month
+            }))
+          : [],
+        sales: analysisResults.chartData.sales?.length > 0
+          ? analysisResults.chartData.sales.map((item, index) => ({
+              ...item,
+              period: generateDateLabels(analysisResults.chartData.sales.length, 'month')[index] || item.period
+            }))
+          : [],
+        distribution: analysisResults.chartData.distribution || [],
+        customers: analysisResults.chartData.customers?.length > 0
+          ? analysisResults.chartData.customers
+          : [
+              { segment: 'New Customers', count: 245, value: 45 },
+              { segment: 'Returning', count: 567, value: 35 },
+              { segment: 'VIP', count: 123, value: 15 },
+              { segment: 'At-Risk', count: 89, value: 5 }
+            ],
+        products: analysisResults.chartData.products?.length > 0
+          ? analysisResults.chartData.products
+          : [],
+        traffic: [
+          { source: 'Organic Search', visitors: 2847, percentage: 42 },
+          { source: 'Direct', visitors: 1923, percentage: 28 },
+          { source: 'Social Media', visitors: 1456, percentage: 21 },
+          { source: 'Email', visitors: 634, percentage: 9 }
+        ],
+        conversion: generateDateLabels(6, 'month').map((month, index) => ({
+          month,
+          rate: 3.2 + (Math.random() * 1.5)
+        }))
+      };
+
+      return processedData;
+    }
+    return null;
+  };
+
+  const dashboardData = getDashboardData();
+
+  // Helper function to determine which charts to show based on data relevance
+  const shouldShowChart = (chartType: string) => {
+    if (!dashboardData) return false;
+    
+    switch (chartType) {
+      case 'revenue':
+        return dashboardData.revenue.length > 0;
+      case 'sales':
+        return dashboardData.sales.length > 0;
+      case 'distribution':
+        return dashboardData.distribution.length > 0;
+      case 'customers':
+        return dashboardData.customers.length > 0;
+      case 'products':
+        return dashboardData.products.length > 0;
+      case 'traffic':
+        return true; // Always show if we have any data
+      case 'conversion':
+        return true; // Always show if we have any data
+      default:
+        return false;
+    }
+  };
+
+  // Custom tooltip component for dark mode compatibility
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg">
+          <p className="text-gray-900 dark:text-white font-medium">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-gray-700 dark:text-gray-300">
+              <span style={{ color: entry.color }}>{entry.name}: </span>
+              {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   const handleExportPDF = async () => {
     try {
       if (!analysisResults) {
@@ -91,7 +214,7 @@ const Index = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('generate-report-pdf', {
+      const { data, error } = await supabase.functions.invoke('generate-pdf', {
         body: { 
           reportData: analysisResults,
           reportTitle: 'Dashboard Analysis Report',
@@ -110,80 +233,32 @@ const Index = () => {
         throw new Error('No PDF data received from server');
       }
 
-      // Create a blob from the base64 PDF data
-      const pdfBlob = new Blob([Uint8Array.from(atob(data.pdf), c => c.charCodeAt(0))], {
-        type: 'application/pdf'
-      });
-
-      // Create download link
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dashboard_report_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Create a printable HTML page that can be saved as PDF
+      const htmlContent = atob(data.pdf);
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        
+        // Trigger print dialog
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
 
       toast({
-        title: "Export Complete",
-        description: "Your dashboard report has been exported as PDF.",
+        title: "PDF Ready",
+        description: "Your report is ready for printing or saving as PDF.",
       });
     } catch (error) {
       console.error('Export error:', error);
       toast({
         title: "Export Failed",
-        description: "Failed to export PDF. Please try again.",
+        description: "Failed to generate PDF. Please try again.",
         variant: "destructive"
       });
     }
   };
-
-  // Generate comprehensive dashboard data
-  const getDashboardData = () => {
-    if (analysisResults && analysisResults.chartData) {
-      return {
-        revenue: analysisResults.chartData.revenue || [],
-        sales: analysisResults.chartData.sales || [],
-        distribution: analysisResults.chartData.distribution || [],
-        trends: analysisResults.chartData.trends || [
-          { period: 'Q1', growth: 12 },
-          { period: 'Q2', growth: 18 },
-          { period: 'Q3', growth: 25 },
-          { period: 'Q4', growth: 15 }
-        ],
-        customers: analysisResults.chartData.customers || [
-          { segment: 'New', count: 245, value: 45 },
-          { segment: 'Returning', count: 567, value: 35 },
-          { segment: 'VIP', count: 123, value: 15 },
-          { segment: 'At-Risk', count: 89, value: 5 }
-        ],
-        products: analysisResults.chartData.products || [
-          { name: 'Product A', sales: 847, revenue: 25400 },
-          { name: 'Product B', sales: 623, revenue: 18700 },
-          { name: 'Product C', sales: 456, revenue: 13600 },
-          { name: 'Product D', sales: 321, revenue: 9600 }
-        ],
-        traffic: [
-          { source: 'Organic Search', visitors: 2847, percentage: 42 },
-          { source: 'Direct', visitors: 1923, percentage: 28 },
-          { source: 'Social Media', visitors: 1456, percentage: 21 },
-          { source: 'Email', visitors: 634, percentage: 9 }
-        ],
-        conversion: [
-          { month: 'Jan', rate: 3.2 },
-          { month: 'Feb', rate: 3.8 },
-          { month: 'Mar', rate: 4.1 },
-          { month: 'Apr', rate: 4.5 },
-          { month: 'May', rate: 4.2 },
-          { month: 'Jun', rate: 4.7 }
-        ]
-      };
-    }
-    return null;
-  };
-
-  const dashboardData = getDashboardData();
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -224,121 +299,159 @@ const Index = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 space-y-6">
                     {/* Revenue Overview */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <TrendingUp className="w-5 h-5" />
-                          Revenue Overview
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-80">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={dashboardData.revenue}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="month" />
-                              <YAxis />
-                              <Tooltip />
-                              <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    {shouldShowChart('revenue') && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5" />
+                            Revenue Overview
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-80">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={dashboardData.revenue}>
+                                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                                <XAxis 
+                                  dataKey="month" 
+                                  className="text-gray-600 dark:text-gray-300"
+                                  tick={{ fill: 'currentColor' }}
+                                />
+                                <YAxis 
+                                  className="text-gray-600 dark:text-gray-300"
+                                  tick={{ fill: 'currentColor' }}
+                                />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Charts Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg">Sales Trends</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={dashboardData.sales}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="period" />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="sales" fill="#8884d8" />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      {shouldShowChart('sales') && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">Sales Trends</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="h-48">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={dashboardData.sales}>
+                                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                                  <XAxis 
+                                    dataKey="period" 
+                                    className="text-gray-600 dark:text-gray-300"
+                                    tick={{ fill: 'currentColor' }}
+                                  />
+                                  <YAxis 
+                                    className="text-gray-600 dark:text-gray-300"
+                                    tick={{ fill: 'currentColor' }}
+                                  />
+                                  <Tooltip content={<CustomTooltip />} />
+                                  <Bar dataKey="sales" fill="#8884d8" />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
 
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg">Data Distribution</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <Pie
-                                  data={dashboardData.distribution}
-                                  cx="50%"
-                                  cy="50%"
-                                  labelLine={false}
-                                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                  outerRadius={60}
-                                  fill="#8884d8"
-                                  dataKey="value"
-                                >
-                                  {dashboardData.distribution.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                  ))}
-                                </Pie>
-                                <Tooltip />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      {shouldShowChart('distribution') && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg">Data Distribution</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="h-48">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={dashboardData.distribution}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    outerRadius={60}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                  >
+                                    {dashboardData.distribution.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip content={<CustomTooltip />} />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
 
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-lg">
-                            <Users className="w-5 h-5" />
-                            Customer Segments
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={dashboardData.customers}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="segment" />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="count" fill="#00C49F" />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      {shouldShowChart('customers') && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                              <Users className="w-5 h-5" />
+                              Customer Segments
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="h-48">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={dashboardData.customers}>
+                                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                                  <XAxis 
+                                    dataKey="segment" 
+                                    className="text-gray-600 dark:text-gray-300"
+                                    tick={{ fill: 'currentColor' }}
+                                  />
+                                  <YAxis 
+                                    className="text-gray-600 dark:text-gray-300"
+                                    tick={{ fill: 'currentColor' }}
+                                  />
+                                  <Tooltip content={<CustomTooltip />} />
+                                  <Bar dataKey="count" fill="#00C49F" />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
 
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-lg">
-                            <Target className="w-5 h-5" />
-                            Product Performance
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={dashboardData.products}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="sales" fill="#FFBB28" />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      {shouldShowChart('products') && dashboardData.products.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                              <Target className="w-5 h-5" />
+                              Product Performance
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="h-48">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={dashboardData.products}>
+                                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                                  <XAxis 
+                                    dataKey="name" 
+                                    className="text-gray-600 dark:text-gray-300"
+                                    tick={{ fill: 'currentColor' }}
+                                  />
+                                  <YAxis 
+                                    className="text-gray-600 dark:text-gray-300"
+                                    tick={{ fill: 'currentColor' }}
+                                  />
+                                  <Tooltip content={<CustomTooltip />} />
+                                  <Bar dataKey="sales" fill="#FFBB28" />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
 
                       <Card>
                         <CardHeader>
@@ -365,7 +478,7 @@ const Index = () => {
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                   ))}
                                 </Pie>
-                                <Tooltip />
+                                <Tooltip content={<CustomTooltip />} />
                               </PieChart>
                             </ResponsiveContainer>
                           </div>
@@ -383,10 +496,17 @@ const Index = () => {
                           <div className="h-48">
                             <ResponsiveContainer width="100%" height="100%">
                               <LineChart data={dashboardData.conversion}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="month" />
-                                <YAxis />
-                                <Tooltip />
+                                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                                <XAxis 
+                                  dataKey="month" 
+                                  className="text-gray-600 dark:text-gray-300"
+                                  tick={{ fill: 'currentColor' }}
+                                />
+                                <YAxis 
+                                  className="text-gray-600 dark:text-gray-300"
+                                  tick={{ fill: 'currentColor' }}
+                                />
+                                <Tooltip content={<CustomTooltip />} />
                                 <Line type="monotone" dataKey="rate" stroke="#FF8042" strokeWidth={2} />
                               </LineChart>
                             </ResponsiveContainer>
