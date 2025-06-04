@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,11 +33,14 @@ import {
   Download,
   Plus,
   Database,
-  UploadCloud
+  UploadCloud,
+  Target,
+  Globe,
+  MousePointer
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const Index = () => {
   const navigate = useNavigate();
@@ -91,11 +95,20 @@ const Index = () => {
         body: { 
           reportData: analysisResults,
           reportTitle: 'Dashboard Analysis Report',
-          reportType: 'Dashboard Overview'
+          reportType: 'Dashboard Overview',
+          includeCharts: true,
+          chartData: analysisResults.chartData
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('PDF generation error:', error);
+        throw error;
+      }
+
+      if (!data || !data.pdf) {
+        throw new Error('No PDF data received from server');
+      }
 
       // Create a blob from the base64 PDF data
       const pdfBlob = new Blob([Uint8Array.from(atob(data.pdf), c => c.charCodeAt(0))], {
@@ -125,6 +138,52 @@ const Index = () => {
       });
     }
   };
+
+  // Generate comprehensive dashboard data
+  const getDashboardData = () => {
+    if (analysisResults && analysisResults.chartData) {
+      return {
+        revenue: analysisResults.chartData.revenue || [],
+        sales: analysisResults.chartData.sales || [],
+        distribution: analysisResults.chartData.distribution || [],
+        trends: analysisResults.chartData.trends || [
+          { period: 'Q1', growth: 12 },
+          { period: 'Q2', growth: 18 },
+          { period: 'Q3', growth: 25 },
+          { period: 'Q4', growth: 15 }
+        ],
+        customers: analysisResults.chartData.customers || [
+          { segment: 'New', count: 245, value: 45 },
+          { segment: 'Returning', count: 567, value: 35 },
+          { segment: 'VIP', count: 123, value: 15 },
+          { segment: 'At-Risk', count: 89, value: 5 }
+        ],
+        products: analysisResults.chartData.products || [
+          { name: 'Product A', sales: 847, revenue: 25400 },
+          { name: 'Product B', sales: 623, revenue: 18700 },
+          { name: 'Product C', sales: 456, revenue: 13600 },
+          { name: 'Product D', sales: 321, revenue: 9600 }
+        ],
+        traffic: [
+          { source: 'Organic Search', visitors: 2847, percentage: 42 },
+          { source: 'Direct', visitors: 1923, percentage: 28 },
+          { source: 'Social Media', visitors: 1456, percentage: 21 },
+          { source: 'Email', visitors: 634, percentage: 9 }
+        ],
+        conversion: [
+          { month: 'Jan', rate: 3.2 },
+          { month: 'Feb', rate: 3.8 },
+          { month: 'Mar', rate: 4.1 },
+          { month: 'Apr', rate: 4.5 },
+          { month: 'May', rate: 4.2 },
+          { month: 'Jun', rate: 4.7 }
+        ]
+      };
+    }
+    return null;
+  };
+
+  const dashboardData = getDashboardData();
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -161,7 +220,7 @@ const Index = () => {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              {analysisResults && analysisResults.chartData ? (
+              {dashboardData ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 space-y-6">
                     {/* Revenue Overview */}
@@ -175,7 +234,7 @@ const Index = () => {
                       <CardContent>
                         <div className="h-80">
                           <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={analysisResults.chartData.revenue || []}>
+                            <LineChart data={dashboardData.revenue}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="month" />
                               <YAxis />
@@ -187,7 +246,7 @@ const Index = () => {
                       </CardContent>
                     </Card>
 
-                    {/* Additional Charts */}
+                    {/* Charts Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <Card>
                         <CardHeader>
@@ -196,7 +255,7 @@ const Index = () => {
                         <CardContent>
                           <div className="h-48">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={analysisResults.chartData.sales || []}>
+                              <BarChart data={dashboardData.sales}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="period" />
                                 <YAxis />
@@ -217,7 +276,7 @@ const Index = () => {
                             <ResponsiveContainer width="100%" height="100%">
                               <PieChart>
                                 <Pie
-                                  data={analysisResults.chartData.distribution || []}
+                                  data={dashboardData.distribution}
                                   cx="50%"
                                   cy="50%"
                                   labelLine={false}
@@ -226,12 +285,110 @@ const Index = () => {
                                   fill="#8884d8"
                                   dataKey="value"
                                 >
-                                  {(analysisResults.chartData.distribution || []).map((entry, index) => (
+                                  {dashboardData.distribution.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                   ))}
                                 </Pie>
                                 <Tooltip />
                               </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Users className="w-5 h-5" />
+                            Customer Segments
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-48">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={dashboardData.customers}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="segment" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="count" fill="#00C49F" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Target className="w-5 h-5" />
+                            Product Performance
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-48">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={dashboardData.products}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="sales" fill="#FFBB28" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Globe className="w-5 h-5" />
+                            Traffic Sources
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-48">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={dashboardData.traffic}
+                                  cx="50%"
+                                  cy="50%"
+                                  labelLine={false}
+                                  label={({ source, percentage }) => `${source} ${percentage}%`}
+                                  outerRadius={60}
+                                  fill="#8884d8"
+                                  dataKey="visitors"
+                                >
+                                  {dashboardData.traffic.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                  ))}
+                                </Pie>
+                                <Tooltip />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <MousePointer className="w-5 h-5" />
+                            Conversion Rate Trend
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-48">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={dashboardData.conversion}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="month" />
+                                <YAxis />
+                                <Tooltip />
+                                <Line type="monotone" dataKey="rate" stroke="#FF8042" strokeWidth={2} />
+                              </LineChart>
                             </ResponsiveContainer>
                           </div>
                         </CardContent>
@@ -248,9 +405,18 @@ const Index = () => {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {analysisResults.recommendations?.map((recommendation, index) => (
-                          <div key={index} className="text-sm">
+                        {analysisResults?.recommendations?.map((recommendation, index) => (
+                          <div key={index} className="text-sm p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
                             {index + 1}. {recommendation}
+                          </div>
+                        )) || [
+                          "Focus on high-value customer segments for better ROI",
+                          "Optimize product mix based on performance metrics", 
+                          "Implement retention strategies for at-risk customers",
+                          "Scale successful marketing channels"
+                        ].map((rec, index) => (
+                          <div key={index} className="text-sm p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+                            {index + 1}. {rec}
                           </div>
                         ))}
                       </CardContent>
@@ -259,7 +425,7 @@ const Index = () => {
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          <Users className="w-5 h-5" />
+                          <Download className="w-5 h-5" />
                           Export Results
                         </CardTitle>
                       </CardHeader>
@@ -310,8 +476,8 @@ const Index = () => {
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-lg font-semibold mb-2">Analysis Summary</h3>
-                        <div className="p-4 bg-blue-50 rounded-lg">
-                          <p className="text-gray-700">{analysisResults.summary}</p>
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                          <p className="text-gray-700 dark:text-gray-300">{analysisResults.summary}</p>
                         </div>
                       </div>
                       
@@ -319,8 +485,8 @@ const Index = () => {
                         <h3 className="text-lg font-semibold mb-2">Key Metrics</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           {analysisResults.keyMetrics?.map((metric: any, index: number) => (
-                            <div key={index} className="p-4 bg-white border rounded-lg">
-                              <div className="text-sm text-gray-600">{metric.label}</div>
+                            <div key={index} className="p-4 bg-white dark:bg-gray-800 border rounded-lg">
+                              <div className="text-sm text-gray-600 dark:text-gray-400">{metric.label}</div>
                               <div className="text-xl font-bold">{metric.value}</div>
                               <div className="text-sm text-green-600">{metric.change}</div>
                             </div>
@@ -332,8 +498,8 @@ const Index = () => {
                         <h3 className="text-lg font-semibold mb-2">AI Recommendations</h3>
                         <div className="space-y-2">
                           {analysisResults.recommendations?.map((rec: string, index: number) => (
-                            <div key={index} className="p-3 bg-green-50 border-l-4 border-green-400 rounded">
-                              <p className="text-gray-700">{index + 1}. {rec}</p>
+                            <div key={index} className="p-3 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-400 rounded">
+                              <p className="text-gray-700 dark:text-gray-300">{index + 1}. {rec}</p>
                             </div>
                           ))}
                         </div>
@@ -342,8 +508,8 @@ const Index = () => {
                   ) : (
                     <div className="text-center py-8">
                       <BrainCircuit className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Analysis Available</h3>
-                      <p className="text-gray-600 mb-4">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Analysis Available</h3>
+                      <p className="text-gray-600 dark:text-gray-300 mb-4">
                         Upload your data in the Data Analysis tab to see AI-powered insights here.
                       </p>
                       <Button onClick={() => setActiveTab('data-analysis')}>

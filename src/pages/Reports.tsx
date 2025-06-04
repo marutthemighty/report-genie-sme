@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -311,7 +310,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
               <FileText className="w-6 h-6 text-gray-600 dark:text-gray-300" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports</h1>
-                <p className="text-gray-600 dark:text-gray-300">Manage and view your AI-generated professional reports</p>
+                <p className="text-gray-600 dark:text-gray-300">Manage and view your AI-generated reports</p>
               </div>
             </div>
             <Button 
@@ -335,7 +334,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Search</label>
                   <div className="relative">
@@ -394,28 +393,30 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Bulk Actions</label>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleBulkDownload}
-                      disabled={selectedReports.size === 0}
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      Download ({selectedReports.size})
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleExportAll}
-                      disabled={filteredReports.length === 0}
-                    >
-                      Export All
-                    </Button>
-                  </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Bulk Actions</label>
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleBulkDownload}
+                    disabled={selectedReports.size === 0}
+                    className="w-fit"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Download ({selectedReports.size})
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleExportAll}
+                    disabled={filteredReports.length === 0}
+                    className="w-fit"
+                  >
+                    Export All
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -424,7 +425,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
           {/* Reports Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Professional Reports ({filteredReports.length})</CardTitle>
+              <CardTitle>Reports ({filteredReports.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {filteredReports.length === 0 ? (
