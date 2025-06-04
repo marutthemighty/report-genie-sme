@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -25,7 +27,9 @@ import {
   ArrowUpDown,
   Calendar,
   Database,
-  TrendingUp
+  TrendingUp,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import CreateReportModal from '@/components/CreateReportModal';
@@ -35,8 +39,10 @@ const Reports = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [dataSourceFilter, setDataSourceFilter] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedReportHtml, setSelectedReportHtml] = useState<string | null>(null);
+  const [selectedReports, setSelectedReports] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -55,14 +61,18 @@ const Reports = () => {
     'Traffic Analytics'
   ];
 
+  // Get unique data sources from reports
+  const uniqueDataSources = Array.from(new Set(reports.map(report => report.data_source)));
+
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          report.report_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          report.data_source.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || report.status.toLowerCase() === statusFilter;
     const matchesType = typeFilter === 'all' || report.report_type === typeFilter;
+    const matchesDataSource = dataSourceFilter === 'all' || report.data_source === dataSourceFilter;
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesDataSource;
   });
 
   const handleCreateReport = async (reportData: any) => {
@@ -80,7 +90,6 @@ const Reports = () => {
       description: `Loading "${reportName}" for editing...`,
     });
     
-    // Navigate to the dedicated Editor page with the report ID
     navigate(`/editor?id=${reportId}`);
   };
 
@@ -96,6 +105,24 @@ const Reports = () => {
     }
   };
 
+  const handleSelectReport = (reportId: string, isSelected: boolean) => {
+    const newSelected = new Set(selectedReports);
+    if (isSelected) {
+      newSelected.add(reportId);
+    } else {
+      newSelected.delete(reportId);
+    }
+    setSelectedReports(newSelected);
+  };
+
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedReports(new Set(filteredReports.map(report => report.id)));
+    } else {
+      setSelectedReports(new Set());
+    }
+  };
+
   const handleDownload = (report: any) => {
     try {
       let content = '';
@@ -103,12 +130,10 @@ const Reports = () => {
       let mimeType = '';
 
       if (report.html_content) {
-        // Download as HTML for professional viewing
         content = report.html_content;
         fileName = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_professional_report.html`;
         mimeType = 'text/html';
       } else {
-        // Fallback to text format
         content = `
 ${report.name}
 Generated on: ${new Date(report.created_at).toLocaleDateString()}
@@ -132,7 +157,6 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
         mimeType = 'text/plain';
       }
 
-      // Create and download the file
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -145,13 +169,46 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
 
       toast({
         title: "Download Complete",
-        description: `Professional report "${report.name}" has been downloaded.`,
+        description: `Report "${report.name}" has been downloaded.`,
       });
     } catch (error) {
       console.error('Download error:', error);
       toast({
         title: "Download Failed",
         description: "Failed to download the report. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkDownload = () => {
+    try {
+      if (selectedReports.size === 0) {
+        toast({
+          title: "No Reports Selected",
+          description: "Please select reports to download.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const selectedReportData = filteredReports.filter(report => selectedReports.has(report.id));
+      
+      selectedReportData.forEach(report => {
+        setTimeout(() => handleDownload(report), 100); // Small delay between downloads
+      });
+
+      toast({
+        title: "Bulk Download Started",
+        description: `Downloading ${selectedReports.size} selected reports.`,
+      });
+
+      setSelectedReports(new Set()); // Clear selection after download
+    } catch (error) {
+      console.error('Bulk download error:', error);
+      toast({
+        title: "Bulk Download Failed",
+        description: "Failed to download selected reports. Please try again.",
         variant: "destructive"
       });
     }
@@ -168,7 +225,6 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
         return;
       }
 
-      // Create combined report content
       let allReportsContent = `All Reports Export\nGenerated on: ${new Date().toLocaleDateString()}\nTotal Reports: ${filteredReports.length}\n\n`;
       
       filteredReports.forEach((report, index) => {
@@ -193,7 +249,6 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
 `;
       });
 
-      // Create and download the file
       const blob = new Blob([allReportsContent], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -276,11 +331,11 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Filter className="w-5 h-5" />
-                Filters
+                Filters & Bulk Actions
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Search</label>
                   <div className="relative">
@@ -324,18 +379,43 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data Source</label>
+                  <Select value={dataSourceFilter} onValueChange={setDataSourceFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      {uniqueDataSources.map((source) => (
+                        <SelectItem key={source} value={source}>{source}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Actions</label>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={handleExportAll}
-                    disabled={filteredReports.length === 0}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export All
-                  </Button>
+                  <label className="text-sm font-medium">Bulk Actions</label>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleBulkDownload}
+                      disabled={selectedReports.size === 0}
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      Download ({selectedReports.size})
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleExportAll}
+                      disabled={filteredReports.length === 0}
+                    >
+                      Export All
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -365,6 +445,12 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedReports.size === filteredReports.length && filteredReports.length > 0}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
                       <TableHead className="cursor-pointer">
                         <div className="flex items-center gap-1">
                           Name
@@ -391,6 +477,12 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                   <TableBody>
                     {filteredReports.map((report) => (
                       <TableRow key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedReports.has(report.id)}
+                            onCheckedChange={(checked) => handleSelectReport(report.id, checked as boolean)}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           <div>
                             <div>{report.name}</div>

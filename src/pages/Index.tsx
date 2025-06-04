@@ -3,9 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from '@/hooks/use-toast';
 import { useReports } from '@/hooks/useReports';
 import CollaborationPanel from '@/components/CollaborationPanel';
@@ -30,17 +27,14 @@ import {
 import {
   FileText,
   TrendingUp,
-  SlidersHorizontal,
   BrainCircuit,
   Users,
   Download,
   Plus,
-  Edit,
-  Trash2,
   Database,
-  Calendar,
-  TrendingDown
+  UploadCloud
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -51,80 +45,18 @@ const Index = () => {
   const { toast } = useToast();
   const { reports, loading, createReport } = useReports();
   const [activeTab, setActiveTab] = useState('overview');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [editReport, setEditReport] = useState(null);
-  const [reportName, setReportName] = useState('');
   const [analysisResults, setAnalysisResults] = useState(null);
 
   useEffect(() => {
-    // Check if the location state contains the 'openCreateModal' flag
     if (location.state?.openCreateModal) {
       setIsCreateModalOpen(true);
-      // Clear the flag from the location state to prevent re-triggering
       navigate('.', { replace: true, state: { ...location.state, openCreateModal: false } });
     }
 
     if (location.state?.editReport) {
-      setEditReport(location.state.editReport);
-      setReportName(location.state.reportName);
-      setActiveTab(location.state.activeTab || 'ai-preview');
       navigate('.', { replace: true, state: { ...location.state, editReport: null, reportName: null, activeTab: null } });
     }
   }, [location, navigate]);
-
-  const revenueData = [
-    { month: 'Jan', revenue: 4000 },
-    { month: 'Feb', revenue: 3000 },
-    { month: 'Mar', revenue: 2000 },
-    { month: 'Apr', revenue: 2780 },
-    { month: 'May', revenue: 1890 },
-    { month: 'Jun', revenue: 2390 },
-    { month: 'Jul', revenue: 3490 },
-    { month: 'Aug', revenue: 3000 },
-    { month: 'Sep', revenue: 2000 },
-    { month: 'Oct', revenue: 2780 },
-    { month: 'Nov', revenue: 1890 },
-    { month: 'Dec', revenue: 2390 },
-  ];
-
-  const customerSegments = [
-    { name: 'New Visitors', value: 400 },
-    { name: 'Returning Customers', value: 300 },
-    { name: 'Loyal Members', value: 300 },
-    { name: 'Inactive Users', value: 200 },
-  ];
-
-  const productPerformance = [
-    { product: 'Product A', sales: 4000 },
-    { product: 'Product B', sales: 3000 },
-    { product: 'Product C', sales: 2000 },
-    { product: 'Product D', sales: 2780 },
-    { product: 'Product E', sales: 1890 },
-    { product: 'Product F', sales: 2390 },
-  ];
-
-  const trafficSources = [
-    { name: 'Direct', value: 400 },
-    { name: 'Referral', value: 300 },
-    { name: 'Organic Search', value: 300 },
-    { name: 'Paid Ads', value: 200 },
-  ];
-
-  const conversionData = [
-    { month: 'Jan', rate: 2.4 },
-    { month: 'Feb', rate: 3.1 },
-    { month: 'Mar', rate: 2.8 },
-    { month: 'Apr', rate: 3.5 },
-    { month: 'May', rate: 4.1 },
-    { month: 'Jun', rate: 3.8 },
-  ];
-
-  const aiRecommendations = [
-    "Optimize website loading speed to improve user experience and SEO rankings.",
-    "Personalize email marketing campaigns based on customer behavior to increase conversion rates.",
-    "Implement a customer loyalty program to reward repeat purchases and build brand loyalty.",
-    "Use social media analytics to identify trending topics and engage with customers in real-time.",
-  ];
 
   const handleCreateReport = async (reportData: any) => {
     try {
@@ -144,6 +76,56 @@ const Index = () => {
     });
   };
 
+  const handleExportPDF = async () => {
+    try {
+      if (!analysisResults) {
+        toast({
+          title: "No Data to Export",
+          description: "Please analyze your data first before exporting.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('generate-report-pdf', {
+        body: { 
+          reportData: analysisResults,
+          reportTitle: 'Dashboard Analysis Report',
+          reportType: 'Dashboard Overview'
+        }
+      });
+
+      if (error) throw error;
+
+      // Create a blob from the base64 PDF data
+      const pdfBlob = new Blob([Uint8Array.from(atob(data.pdf), c => c.charCodeAt(0))], {
+        type: 'application/pdf'
+      });
+
+      // Create download link
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dashboard_report_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Complete",
+        description: "Your dashboard report has been exported as PDF.",
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar onCreateReport={() => setIsCreateModalOpen(true)} />
@@ -156,7 +138,7 @@ const Index = () => {
               <TrendingUp className="w-6 h-6 text-gray-600 dark:text-gray-300" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-                <p className="text-gray-600 dark:text-gray-300">Overview of key metrics and insights</p>
+                <p className="text-gray-600 dark:text-gray-300">Upload and analyze your business data</p>
               </div>
             </div>
             <Button 
@@ -179,189 +161,136 @@ const Index = () => {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              {/* Revenue Overview */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    Revenue Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={revenueData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Sales Analysis Results */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                  {/* Revenue Trends and Customer Segments */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {analysisResults && analysisResults.chartData ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Revenue Overview */}
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-lg">Revenue Trends</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5" />
+                          Revenue Overview
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-48">
+                        <div className="h-80">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={revenueData.slice(0, 6)}>
+                            <LineChart data={analysisResults.chartData.revenue || []}>
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="month" />
                               <YAxis />
                               <Tooltip />
-                              <Bar dataKey="revenue" fill="#8884d8" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-lg">Customer Segments</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-48">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={customerSegments}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                outerRadius={60}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
-                                {customerSegments.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Product Performance */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Product Performance</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-48">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={productPerformance}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="product" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="sales" fill="#82ca9d" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Traffic Sources and Conversion Rate */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-lg">Traffic Sources</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-48">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={trafficSources}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                outerRadius={60}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
-                                {trafficSources.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-lg">Conversion Rate Trend</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-48">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={conversionData}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="month" />
-                              <YAxis />
-                              <Tooltip />
-                              <Line type="monotone" dataKey="rate" stroke="#ff7300" strokeWidth={2} />
+                              <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
                       </CardContent>
                     </Card>
+
+                    {/* Additional Charts */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Sales Trends</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-48">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={analysisResults.chartData.sales || []}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="period" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="sales" fill="#8884d8" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Data Distribution</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-48">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={analysisResults.chartData.distribution || []}
+                                  cx="50%"
+                                  cy="50%"
+                                  labelLine={false}
+                                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                  outerRadius={60}
+                                  fill="#8884d8"
+                                  dataKey="value"
+                                >
+                                  {(analysisResults.chartData.distribution || []).map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                  ))}
+                                </Pie>
+                                <Tooltip />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <BrainCircuit className="w-5 h-5" />
+                          AI Recommendations
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {analysisResults.recommendations?.map((recommendation, index) => (
+                          <div key={index} className="text-sm">
+                            {index + 1}. {recommendation}
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="w-5 h-5" />
+                          Export Results
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={handleExportPDF}
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Export as PDF
+                        </Button>
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
-
-                {/* AI Recommendations and Export Results */}
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <BrainCircuit className="w-5 h-5" />
-                        AI Recommendations
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {aiRecommendations.map((recommendation, index) => (
-                        <div key={index} className="text-sm">
-                          {index + 1}. {recommendation}
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="w-5 h-5" />
-                        Export Results
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Button variant="outline" className="w-full">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export as PDF
-                      </Button>
-                    </CardContent>
-                  </Card>
+              ) : (
+                <div className="text-center py-12">
+                  <UploadCloud className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
+                    No Data Uploaded Yet
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    Upload your business data to see comprehensive analytics and insights
+                  </p>
+                  <Button onClick={() => setActiveTab('data-analysis')}>
+                    <Database className="w-4 h-4 mr-2" />
+                    Upload Data
+                  </Button>
                 </div>
-              </div>
+              )}
             </TabsContent>
 
             <TabsContent value="data-analysis" className="space-y-6">
@@ -380,15 +309,15 @@ const Index = () => {
                   {analysisResults ? (
                     <div className="space-y-6">
                       <div>
-                        <Label className="text-lg font-semibold">Analysis Summary</Label>
-                        <div className="mt-2 p-4 bg-blue-50 rounded-lg">
+                        <h3 className="text-lg font-semibold mb-2">Analysis Summary</h3>
+                        <div className="p-4 bg-blue-50 rounded-lg">
                           <p className="text-gray-700">{analysisResults.summary}</p>
                         </div>
                       </div>
                       
                       <div>
-                        <Label className="text-lg font-semibold">Key Metrics</Label>
-                        <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <h3 className="text-lg font-semibold mb-2">Key Metrics</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           {analysisResults.keyMetrics?.map((metric: any, index: number) => (
                             <div key={index} className="p-4 bg-white border rounded-lg">
                               <div className="text-sm text-gray-600">{metric.label}</div>
@@ -400,8 +329,8 @@ const Index = () => {
                       </div>
 
                       <div>
-                        <Label className="text-lg font-semibold">AI Recommendations</Label>
-                        <div className="mt-2 space-y-2">
+                        <h3 className="text-lg font-semibold mb-2">AI Recommendations</h3>
+                        <div className="space-y-2">
                           {analysisResults.recommendations?.map((rec: string, index: number) => (
                             <div key={index} className="p-3 bg-green-50 border-l-4 border-green-400 rounded">
                               <p className="text-gray-700">{index + 1}. {rec}</p>

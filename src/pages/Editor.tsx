@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useReports } from '@/hooks/useReports';
 import Sidebar from '@/components/Sidebar';
+import TemplateBuilder from '@/components/TemplateBuilder';
 import { 
   Save, 
   ArrowLeft, 
@@ -40,7 +41,6 @@ const Editor = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Complete list of all 9 report types - matching CreateReportModal and Reports page
   const reportTypes = [
     'Sales Performance',
     'Cart Abandonment', 
@@ -78,6 +78,13 @@ const Editor = () => {
     }));
   };
 
+  const handleTemplateChange = (template: any) => {
+    setReportData(prev => ({
+      ...prev,
+      template_layout: template
+    }));
+  };
+
   const handleSave = async () => {
     if (!reportData.name || !reportData.report_type || !reportData.data_source) {
       toast({
@@ -99,7 +106,7 @@ const Editor = () => {
       } else {
         await createReport({
           ...reportData,
-          status: 'draft',
+          status: 'Generated',
           generated_at: new Date().toISOString()
         });
         toast({
@@ -257,12 +264,17 @@ const Editor = () => {
                         <SelectValue placeholder="Select data source" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Database">Database</SelectItem>
-                        <SelectItem value="CSV Upload">CSV Upload</SelectItem>
-                        <SelectItem value="API Integration">API Integration</SelectItem>
+                        <SelectItem value="Shopify">Shopify</SelectItem>
+                        <SelectItem value="WooCommerce">WooCommerce</SelectItem>
                         <SelectItem value="Google Analytics">Google Analytics</SelectItem>
-                        <SelectItem value="Excel File">Excel File</SelectItem>
-                        <SelectItem value="Manual Entry">Manual Entry</SelectItem>
+                        <SelectItem value="Facebook Ads">Facebook Ads</SelectItem>
+                        <SelectItem value="Instagram">Instagram</SelectItem>
+                        <SelectItem value="Amazon">Amazon</SelectItem>
+                        <SelectItem value="BigCommerce">BigCommerce</SelectItem>
+                        <SelectItem value="CSV Upload">CSV Upload</SelectItem>
+                        <SelectItem value="Excel Upload">Excel Upload</SelectItem>
+                        <SelectItem value="Manual Upload">Manual Upload</SelectItem>
+                        <SelectItem value="API Integration">API Integration</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -283,6 +295,7 @@ const Editor = () => {
                       <SelectItem value="Last 3 months">Last 3 months</SelectItem>
                       <SelectItem value="Last 6 months">Last 6 months</SelectItem>
                       <SelectItem value="Last year">Last year</SelectItem>
+                      <SelectItem value="All Time">All Time</SelectItem>
                       <SelectItem value="Custom range">Custom range</SelectItem>
                     </SelectContent>
                   </Select>
@@ -324,36 +337,10 @@ const Editor = () => {
             </Card>
 
             {/* Template Configuration */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Template Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-2">Template Layout (JSON)</p>
-                  <Textarea
-                    value={JSON.stringify(reportData.template_layout, null, 2)}
-                    onChange={(e) => {
-                      try {
-                        const parsed = JSON.parse(e.target.value);
-                        handleInputChange('template_layout', parsed);
-                      } catch (error) {
-                        // Invalid JSON, keep current value
-                      }
-                    }}
-                    placeholder='{"charts": [], "filters": [], "layout": "default"}'
-                    rows={6}
-                    className="w-full font-mono text-sm"
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    Configure chart types, filters, and layout settings in JSON format
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <TemplateBuilder 
+              value={reportData.template_layout}
+              onChange={handleTemplateChange}
+            />
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-6 border-t">
