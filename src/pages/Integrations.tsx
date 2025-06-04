@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,6 +58,76 @@ const Integrations = () => {
       enabled: false,
       apiKey: '',
       logo: '🛒'
+    },
+    {
+      id: 5,
+      name: 'Facebook Ads',
+      description: 'Social media advertising platform for targeted marketing campaigns',
+      status: 'disconnected',
+      lastSync: 'Never',
+      enabled: false,
+      apiKey: '',
+      logo: '📘'
+    },
+    {
+      id: 6,
+      name: 'Instagram',
+      description: 'Social media platform for visual content and business engagement',
+      status: 'disconnected',
+      lastSync: 'Never',
+      enabled: false,
+      apiKey: '',
+      logo: '📷'
+    },
+    {
+      id: 7,
+      name: 'BigCommerce',
+      description: 'E-commerce platform for growing and established businesses',
+      status: 'disconnected',
+      lastSync: 'Never',
+      enabled: false,
+      apiKey: '',
+      logo: '🏪'
+    },
+    {
+      id: 8,
+      name: 'Etsy',
+      description: 'Marketplace for unique and creative goods',
+      status: 'disconnected',
+      lastSync: 'Never',
+      enabled: false,
+      apiKey: '',
+      logo: '🎨'
+    },
+    {
+      id: 9,
+      name: 'Square',
+      description: 'Payment processing and point-of-sale solutions',
+      status: 'disconnected',
+      lastSync: 'Never',
+      enabled: false,
+      apiKey: '',
+      logo: '⬜'
+    },
+    {
+      id: 10,
+      name: 'Wix Commerce',
+      description: 'Website builder with integrated e-commerce capabilities',
+      status: 'disconnected',
+      lastSync: 'Never',
+      enabled: false,
+      apiKey: '',
+      logo: '🌐'
+    },
+    {
+      id: 11,
+      name: 'Adobe Commerce',
+      description: 'Enterprise e-commerce platform formerly known as Magento',
+      status: 'disconnected',
+      lastSync: 'Never',
+      enabled: false,
+      apiKey: '',
+      logo: '🔺'
     }
   ]);
 
@@ -152,7 +221,7 @@ const Integrations = () => {
           {/* Available Integrations */}
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Available Integrations</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {integrations.map((integration) => (
                 <Card key={integration.id}>
                   <CardHeader>

@@ -60,8 +60,21 @@ const Reports = () => {
     'Traffic Analytics'
   ];
 
-  // Get unique data sources from reports
-  const uniqueDataSources = Array.from(new Set(reports.map(report => report.data_source)));
+  // Complete list of all data sources
+  const allDataSources = [
+    'Manual Upload',
+    'Shopify',
+    'Amazon Seller Central',
+    'WooCommerce', 
+    'Google Analytics',
+    'Facebook Ads',
+    'Instagram',
+    'BigCommerce',
+    'Etsy',
+    'Square',
+    'Wix Commerce',
+    'Adobe Commerce'
+  ];
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -97,8 +110,8 @@ const Reports = () => {
       setSelectedReportHtml(report.html_content);
     } else {
       toast({
-        title: "No Professional Report Available",
-        description: "This report doesn't have a professional HTML version available.",
+        title: "No Report Available",
+        description: "This report doesn't have a HTML version available.",
         variant: "destructive"
       });
     }
@@ -130,7 +143,7 @@ const Reports = () => {
 
       if (report.html_content) {
         content = report.html_content;
-        fileName = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_professional_report.html`;
+        fileName = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.html`;
         mimeType = 'text/html';
       } else {
         content = `
@@ -387,7 +400,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Sources</SelectItem>
-                      {uniqueDataSources.map((source) => (
+                      {allDataSources.map((source) => (
                         <SelectItem key={source} value={source}>{source}</SelectItem>
                       ))}
                     </SelectContent>
@@ -397,13 +410,12 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
               
               <div className="space-y-2">
                 <label className="text-sm font-medium">Bulk Actions</label>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={handleBulkDownload}
                     disabled={selectedReports.size === 0}
-                    className="w-fit"
                   >
                     <Download className="w-4 h-4 mr-1" />
                     Download ({selectedReports.size})
@@ -413,7 +425,6 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                     size="sm"
                     onClick={handleExportAll}
                     disabled={filteredReports.length === 0}
-                    className="w-fit"
                   >
                     Export All
                   </Button>
@@ -435,7 +446,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                     No reports found
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    Get started by creating your first professional AI report.
+                    Get started by creating your first AI report.
                   </p>
                   <Button onClick={() => setIsCreateModalOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" />
@@ -511,7 +522,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                                 variant="ghost" 
                                 size="sm"
                                 onClick={() => handleViewReport(report)}
-                                title="View Professional Report"
+                                title="View Report"
                               >
                                 <TrendingUp className="w-4 h-4" />
                               </Button>
@@ -559,12 +570,12 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
         onSubmit={handleCreateReport}
       />
 
-      {/* Professional Report Viewer Modal */}
+      {/* Report Viewer Modal */}
       {selectedReportHtml && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto w-full">
             <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Professional Report Preview</h3>
+              <h3 className="text-lg font-semibold">Report Preview</h3>
               <Button 
                 variant="outline" 
                 onClick={() => setSelectedReportHtml(null)}
