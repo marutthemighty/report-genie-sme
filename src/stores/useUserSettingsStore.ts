@@ -31,6 +31,7 @@ interface UserSettingsState {
     status: 'connected' | 'disconnected';
     lastSync: string;
     apiKey: string;
+    connectionData?: any;
   }>;
   setExportFormats: (formats: ExportFormats) => void;
   setNotifications: (notifications: NotificationSettings) => void;
@@ -139,17 +140,17 @@ export const useUserSettingsStore = create<UserSettingsState>()(
                 email: data.notification_email ?? true,
                 push: data.notification_push ?? false,
               },
-              exportFormats: data.export_formats || {
+              exportFormats: (data.export_formats as ExportFormats) || {
                 pdf: true,
                 csv: true,
                 googleSlides: false,
               },
-              privacy: data.privacy_settings || {
+              privacy: (data.privacy_settings as PrivacySettings) || {
                 dataExportEnabled: true,
                 privacySettingsConfigured: false,
                 consentPreferencesSet: false,
               },
-              connectedIntegrations: data.connected_integrations || [],
+              connectedIntegrations: (data.connected_integrations as any[]) || [],
             });
           }
         } catch (error) {
