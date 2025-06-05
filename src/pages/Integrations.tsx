@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,144 +16,127 @@ import {
   Trash2,
   RefreshCw,
   Eye,
-  EyeOff
+  EyeOff,
+  Info
 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { validateAPIKey, getAPIKeyInstructions } from '@/utils/apiValidation';
+import { useUserSettingsStore } from '@/stores/useUserSettingsStore';
 
 const Integrations = () => {
   const { toast } = useToast();
-  const [integrations, setIntegrations] = useState([
+  const { connectedIntegrations, addIntegration, removeIntegration, syncIntegration, loadFromDatabase } = useUserSettingsStore();
+  
+  const [availableIntegrations, setAvailableIntegrations] = useState([
     {
-      id: 1,
+      id: 'shopify',
       name: 'Shopify',
       description: 'E-commerce platform for online stores and retail point-of-sale systems',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '🛍️',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 2,
+      id: 'google-analytics',
       name: 'Google Analytics',
       description: 'Web analytics service for tracking website traffic and user behavior',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '📊',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 3,
+      id: 'amazon-seller-central',
       name: 'Amazon Seller Central',
       description: 'Platform for managing Amazon marketplace sales and inventory',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '📦',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 4,
+      id: 'woocommerce',
       name: 'WooCommerce',
       description: 'WordPress e-commerce plugin for online stores',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '🛒',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 5,
+      id: 'facebook-ads',
       name: 'Facebook Ads',
       description: 'Social media advertising platform for targeted marketing campaigns',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '📘',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 6,
+      id: 'instagram',
       name: 'Instagram',
       description: 'Social media platform for visual content and business engagement',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '📷',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 7,
+      id: 'bigcommerce',
       name: 'BigCommerce',
       description: 'E-commerce platform for growing and established businesses',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '🏪',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 8,
+      id: 'etsy',
       name: 'Etsy',
       description: 'Marketplace for unique and creative goods',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '🎨',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 9,
+      id: 'square',
       name: 'Square',
       description: 'Payment processing and point-of-sale solutions',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '⬜',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 10,
+      id: 'wix-commerce',
       name: 'Wix Commerce',
       description: 'Website builder with integrated e-commerce capabilities',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '🌐',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     },
     {
-      id: 11,
+      id: 'adobe-commerce',
       name: 'Adobe Commerce',
       description: 'Enterprise e-commerce platform formerly known as Magento',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
       logo: '🔺',
+      apiKey: '',
       isConnecting: false,
-      showApiKey: false
+      showApiKey: false,
+      showInstructions: false
     }
   ]);
 
@@ -163,24 +146,20 @@ const Integrations = () => {
     webhookUrl: ''
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'connected': return 'bg-green-100 text-green-800 border-green-200';
-      case 'error': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  useEffect(() => {
+    loadFromDatabase();
+  }, [loadFromDatabase]);
+
+  const isIntegrationConnected = (integrationId: string) => {
+    return connectedIntegrations.some(int => int.id === integrationId && int.status === 'connected');
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'connected': return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'error': return <AlertCircle className="w-4 h-4 text-red-600" />;
-      default: return <AlertCircle className="w-4 h-4 text-gray-400" />;
-    }
+  const getConnectedIntegration = (integrationId: string) => {
+    return connectedIntegrations.find(int => int.id === integrationId);
   };
 
-  const handleConnect = async (id: number) => {
-    const integration = integrations.find(int => int.id === id);
+  const handleConnect = async (integrationId: string) => {
+    const integration = availableIntegrations.find(int => int.id === integrationId);
     if (!integration?.apiKey.trim()) {
       toast({
         title: "API Key Required",
@@ -190,94 +169,111 @@ const Integrations = () => {
       return;
     }
 
-    setIntegrations(prev =>
-      prev.map(integration =>
-        integration.id === id
-          ? { ...integration, isConnecting: true }
-          : integration
+    setAvailableIntegrations(prev =>
+      prev.map(int =>
+        int.id === integrationId ? { ...int, isConnecting: true } : int
       )
     );
 
-    // Simulate API call
-    setTimeout(() => {
-      setIntegrations(prev =>
-        prev.map(integration =>
-          integration.id === id
-            ? { 
-                ...integration, 
-                status: 'connected', 
-                lastSync: 'Just now',
-                enabled: true,
-                isConnecting: false
-              }
-            : integration
-        )
-      );
+    try {
+      const validationResult = await validateAPIKey(integration.name, integration.apiKey);
+      
+      if (!validationResult.isValid) {
+        toast({
+          title: "Invalid API Key",
+          description: validationResult.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Add to connected integrations
+      addIntegration({
+        id: integrationId,
+        name: integration.name,
+        status: 'connected',
+        lastSync: 'Just now',
+        apiKey: integration.apiKey,
+        connectionData: validationResult.connectionData
+      });
+
       toast({
         title: "Integration Connected",
-        description: `${integration.name} has been successfully connected.`
+        description: `${integration.name} has been successfully connected and validated.`
       });
-    }, 2000);
+
+      // Clear the API key from the form
+      setAvailableIntegrations(prev =>
+        prev.map(int =>
+          int.id === integrationId ? { ...int, apiKey: '', showApiKey: false } : int
+        )
+      );
+      
+    } catch (error) {
+      console.error('Connection error:', error);
+      toast({
+        title: "Connection Failed",
+        description: "Failed to validate API key. Please check your key and try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setAvailableIntegrations(prev =>
+        prev.map(int =>
+          int.id === integrationId ? { ...int, isConnecting: false } : int
+        )
+      );
+    }
   };
 
-  const handleDisconnect = (id: number) => {
-    setIntegrations(prev =>
-      prev.map(integration =>
-        integration.id === id
-          ? { 
-              ...integration, 
-              status: 'disconnected', 
-              lastSync: 'Never', 
-              enabled: false,
-              apiKey: ''
-            }
-          : integration
-      )
-    );
-    toast({
-      title: "Integration Disconnected",
-      description: "The integration has been disconnected."
-    });
+  const handleDisconnect = (integrationId: string) => {
+    const integration = getConnectedIntegration(integrationId);
+    if (integration) {
+      removeIntegration(integrationId);
+      toast({
+        title: "Integration Disconnected",
+        description: `${integration.name} has been disconnected.`
+      });
+    }
   };
 
-  const handleSync = async (id: number) => {
-    const integration = integrations.find(int => int.id === id);
+  const handleSync = async (integrationId: string) => {
+    const integration = getConnectedIntegration(integrationId);
+    if (!integration) return;
+
     toast({
       title: "Syncing Data",
-      description: `Syncing data from ${integration?.name}...`
+      description: `Syncing data from ${integration.name}...`
     });
 
     setTimeout(() => {
-      setIntegrations(prev =>
-        prev.map(integration =>
-          integration.id === id
-            ? { ...integration, lastSync: 'Just now' }
-            : integration
-        )
-      );
+      syncIntegration(integrationId);
       toast({
         title: "Sync Complete",
-        description: `Data from ${integration?.name} has been synced successfully.`
+        description: `Data from ${integration.name} has been synced successfully.`
       });
     }, 3000);
   };
 
-  const handleApiKeyChange = (id: number, value: string) => {
-    setIntegrations(prev =>
-      prev.map(integration =>
-        integration.id === id
-          ? { ...integration, apiKey: value }
-          : integration
+  const handleApiKeyChange = (integrationId: string, value: string) => {
+    setAvailableIntegrations(prev =>
+      prev.map(int =>
+        int.id === integrationId ? { ...int, apiKey: value } : int
       )
     );
   };
 
-  const toggleApiKeyVisibility = (id: number) => {
-    setIntegrations(prev =>
-      prev.map(integration =>
-        integration.id === id
-          ? { ...integration, showApiKey: !integration.showApiKey }
-          : integration
+  const toggleApiKeyVisibility = (integrationId: string) => {
+    setAvailableIntegrations(prev =>
+      prev.map(int =>
+        int.id === integrationId ? { ...int, showApiKey: !int.showApiKey } : int
+      )
+    );
+  };
+
+  const toggleInstructions = (integrationId: string) => {
+    setAvailableIntegrations(prev =>
+      prev.map(int =>
+        int.id === integrationId ? { ...int, showInstructions: !int.showInstructions } : int
       )
     );
   };
@@ -322,19 +318,76 @@ const Integrations = () => {
             <Database className="w-6 h-6 text-gray-600 dark:text-gray-300" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Integrations</h1>
-              <p className="text-gray-600 dark:text-gray-300">Connect your data sources and manage API integrations</p>
+              <p className="text-gray-600 dark:text-gray-300">Connect your data sources with valid API credentials</p>
             </div>
           </div>
         </div>
 
         {/* Content */}
         <div className="p-6 space-y-8">
+          {/* Connected Integrations */}
+          {connectedIntegrations.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Connected Integrations</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {connectedIntegrations.map((integration) => (
+                  <Card key={integration.id} className="border-green-200 dark:border-green-800">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">
+                            {availableIntegrations.find(ai => ai.id === integration.id)?.logo || '🔌'}
+                          </span>
+                          <div>
+                            <CardTitle className="text-lg text-green-700 dark:text-green-300">
+                              {integration.name}
+                            </CardTitle>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                              Last sync: {integration.lastSync}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200">
+                          Connected
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSync(integration.id)}
+                          className="flex-1"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Sync Now
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDisconnect(integration.id)}
+                          className="flex-1 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Disconnect
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Available Integrations */}
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Available Integrations</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {integrations.map((integration) => (
-                <Card key={integration.id} className="h-fit">
+              {availableIntegrations
+                .filter(integration => !isIntegrationConnected(integration.id))
+                .map((integration) => (
+                <Card key={integration.id}>
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -346,34 +399,34 @@ const Integrations = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-2">
-                        {getStatusIcon(integration.status)}
-                        <Badge className={`${getStatusColor(integration.status)} text-xs px-2 py-1 border`}>
-                          {integration.status}
-                        </Badge>
-                      </div>
+                      <Badge className="bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200">
+                        Disconnected
+                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        Last sync: {integration.lastSync}
-                      </span>
-                      <Switch
-                        checked={integration.enabled}
-                        onCheckedChange={(checked) => {
-                          setIntegrations(prev =>
-                            prev.map(int =>
-                              int.id === integration.id ? { ...int, enabled: checked } : int
-                            )
-                          );
-                        }}
-                        disabled={integration.status !== 'connected'}
-                      />
-                    </div>
-
                     <div className="space-y-3">
-                      <Label className="text-sm font-medium">API Key</Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">API Key *</Label>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toggleInstructions(integration.id)}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Info className="w-3 h-3 mr-1" />
+                          Help
+                        </Button>
+                      </div>
+                      
+                      {integration.showInstructions && (
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            {getAPIKeyInstructions(integration.name)}
+                          </p>
+                        </div>
+                      )}
+                      
                       <div className="flex items-center gap-2">
                         <Input
                           type={integration.showApiKey ? "text" : "password"}
@@ -381,52 +434,26 @@ const Integrations = () => {
                           onChange={(e) => handleApiKeyChange(integration.id, e.target.value)}
                           placeholder="Enter your API key"
                           className="text-sm"
-                          disabled={integration.status === 'connected'}
                         />
                         <Button 
                           size="sm" 
                           variant="outline"
                           onClick={() => toggleApiKeyVisibility(integration.id)}
-                          className="px-3"
+                          className="px-3 shrink-0"
                         >
                           {integration.showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </Button>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 pt-2">
-                      {integration.status === 'connected' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSync(integration.id)}
-                            className="flex-1"
-                          >
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Sync Now
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDisconnect(integration.id)}
-                            className="flex-1"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Disconnect
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => handleConnect(integration.id)}
-                          className="w-full"
-                          disabled={integration.isConnecting}
-                        >
-                          {integration.isConnecting ? 'Connecting...' : 'Connect'}
-                        </Button>
-                      )}
-                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleConnect(integration.id)}
+                      className="w-full"
+                      disabled={integration.isConnecting || !integration.apiKey.trim()}
+                    >
+                      {integration.isConnecting ? 'Validating...' : 'Connect & Validate'}
+                    </Button>
                   </CardContent>
                 </Card>
               ))}

@@ -33,6 +33,7 @@ import {
 import Sidebar from '@/components/Sidebar';
 import CreateReportModal from '@/components/CreateReportModal';
 import { useReports } from '@/hooks/useReports';
+import { useUserSettingsStore } from '@/stores/useUserSettingsStore';
 
 const Reports = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,6 +47,7 @@ const Reports = () => {
   const navigate = useNavigate();
   
   const { reports, loading, createReport, deleteReport } = useReports();
+  const { exportFormats } = useUserSettingsStore();
 
   // Complete list of all 9 report types
   const allReportTypes = [
@@ -137,17 +139,96 @@ const Reports = () => {
 
   const handleDownload = (report: any) => {
     try {
-      let content = '';
-      let fileName = '';
-      let mimeType = '';
+      // Check user's preferred export formats
+      const availableFormats = [];
+      if (exportFormats.pdf) availableFormats.push('PDF');
+      if (exportFormats.csv) availableFormats.push('CSV');
+      if (exportFormats.googleSlides) availableFormats.push('Google Slides');
 
-      if (report.html_content) {
-        content = report.html_content;
-        fileName = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.html`;
-        mimeType = 'text/html';
+      if (availableFormats.length === 0) {
+        toast({
+          title: "No Export Formats Enabled",
+          description: "Please enable export formats in Settings first.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // If multiple formats available, show options
+      if (availableFormats.length > 1) {
+        const format = prompt(`Choose export format:\n${availableFormats.join(', ')}`);
+        if (format) {
+          downloadInFormat(report, format.toLowerCase());
+        }
       } else {
-        content = `
-${report.name}
+        downloadInFormat(report, availableFormats[0].toLowerCase());
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the report. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const downloadInFormat = (report: any, format: string) => {
+    let content = '';
+    let fileName = '';
+    let mimeType = '';
+
+    const baseFileName = report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+    switch (format) {
+      case 'pdf':
+        if (report.html_content) {
+          content = report.html_content;
+          fileName = `${baseFileName}_report.html`;
+          mimeType = 'text/html';
+        } else {
+          toast({
+            title: "PDF Not Available",
+            description: "This report doesn't have PDF content.",
+            variant: "destructive"
+          });
+          return;
+        }
+        break;
+
+      case 'csv':
+        content = `Report Name,${report.name}
+Generated Date,${new Date(report.created_at).toLocaleDateString()}
+Report Type,${report.report_type}
+Data Source,${report.data_source}
+Date Range,${report.date_range}
+Status,${report.status}
+
+AI Summary:
+"${report.ai_summary || 'No summary available'}"
+
+AI Predictions:
+"${report.ai_prediction || 'No predictions available'}"`;
+        fileName = `${baseFileName}_report.csv`;
+        mimeType = 'text/csv';
+        break;
+
+      case 'google slides':
+        const slideData = {
+          title: report.name,
+          type: report.report_type,
+          summary: report.ai_summary,
+          predictions: report.ai_prediction,
+          createdAt: report.created_at
+        };
+        content = JSON.stringify(slideData, null, 2);
+        fileName = `${baseFileName}_slides.json`;
+        mimeType = 'application/json';
+        break;
+
+      default:
+        // Fallback to text format
+        content = `${report.name}
 Generated on: ${new Date(report.created_at).toLocaleDateString()}
 
 Report Type: ${report.report_type}
@@ -159,38 +240,25 @@ AI Summary:
 ${report.ai_summary || 'No AI summary available.'}
 
 AI Predictions:
-${report.ai_prediction || 'No AI predictions available.'}
-
-Report ID: ${report.id}
-Created By: ${report.created_by}
-Generated At: ${new Date(report.generated_at).toLocaleString()}
-        `.trim();
-        fileName = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.txt`;
+${report.ai_prediction || 'No AI predictions available.'}`;
+        fileName = `${baseFileName}_report.txt`;
         mimeType = 'text/plain';
-      }
-
-      const blob = new Blob([content], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Download Complete",
-        description: `Report "${report.name}" has been downloaded.`,
-      });
-    } catch (error) {
-      console.error('Download error:', error);
-      toast({
-        title: "Download Failed",
-        description: "Failed to download the report. Please try again.",
-        variant: "destructive"
-      });
     }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Download Complete",
+      description: `Report "${report.name}" downloaded as ${format.toUpperCase()}.`,
+    });
   };
 
   const handleBulkDownload = () => {

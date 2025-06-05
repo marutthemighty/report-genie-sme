@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +38,7 @@ import {
   MousePointer
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserSettingsStore } from '@/stores/useUserSettingsStore';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
@@ -50,6 +50,7 @@ const Index = () => {
   const { reports, loading, createReport } = useReports();
   const [activeTab, setActiveTab] = useState('overview');
   const [analysisResults, setAnalysisResults] = useState(null);
+  const { exportFormats } = useUserSettingsStore();
 
   useEffect(() => {
     if (location.state?.openCreateModal) {
@@ -262,6 +263,148 @@ const Index = () => {
     }
   };
 
+  const exportToPDF = async () => {
+    if (!analysisResults) {
+      toast({
+        title: "No Data Available",
+        description: "Please analyze some data first before exporting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    toast({
+      title: "Generating PDF Report",
+      description: "Creating your comprehensive report with charts...",
+    });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-pdf', {
+        body: {
+          reportData: analysisResults,
+          reportTitle: uploadedFile?.name?.replace('.csv', '') || 'Data Analysis Report',
+          reportType: 'Dashboard Analysis',
+          includeCharts: true,
+          chartData: {
+            revenue: revenueData,
+            sales: salesData,
+            distribution: distributionData
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // Create and download PDF
+      const pdfBlob = new Blob([atob(data.pdf)], { type: 'application/pdf' });
+      const url = URL.createObjectURL(pdfBlob);
+      
+      // Open in new window with proper title
+      const pdfWindow = window.open('', '_blank');
+      if (pdfWindow) {
+        pdfWindow.document.title = `${uploadedFile?.name?.replace('.csv', '') || 'Report'} - Analysis Report`;
+        pdfWindow.location.href = url;
+      }
+
+      toast({
+        title: "PDF Generated Successfully",
+        description: "Your report has been generated with charts and opened in a new tab.",
+      });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportToCSV = () => {
+    if (!analysisResults) {
+      toast({
+        title: "No Data Available",
+        description: "Please analyze some data first before exporting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create comprehensive CSV with analysis results
+    let csvContent = `Analysis Report - ${uploadedFile?.name || 'Unknown Dataset'}\n`;
+    csvContent += `Generated on: ${new Date().toLocaleDateString()}\n\n`;
+    
+    csvContent += `Summary:\n"${analysisResults.summary}"\n\n`;
+    
+    if (analysisResults.keyMetrics) {
+      csvContent += `Key Metrics:\n`;
+      analysisResults.keyMetrics.forEach(metric => {
+        csvContent += `"${metric.label}","${metric.value}","${metric.change}"\n`;
+      });
+      csvContent += `\n`;
+    }
+
+    if (analysisResults.recommendations) {
+      csvContent += `Recommendations:\n`;
+      analysisResults.recommendations.forEach((rec, index) => {
+        csvContent += `"${index + 1}","${rec}"\n`;
+      });
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${uploadedFile?.name?.replace('.csv', '') || 'analysis'}-report.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "CSV Export Complete",
+      description: "Your analysis has been exported as CSV.",
+    });
+  };
+
+  const exportToGoogleSlides = () => {
+    if (!analysisResults) {
+      toast({
+        title: "No Data Available",
+        description: "Please analyze some data first before exporting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create a presentation-ready format
+    const presentationData = {
+      title: uploadedFile?.name?.replace('.csv', '') || 'Data Analysis',
+      summary: analysisResults.summary,
+      keyMetrics: analysisResults.keyMetrics,
+      recommendations: analysisResults.recommendations
+    };
+
+    // For now, create a JSON file that could be imported to Google Slides
+    const blob = new Blob([JSON.stringify(presentationData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${uploadedFile?.name?.replace('.csv', '') || 'analysis'}-slides.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Slides Data Exported",
+      description: "Presentation data exported. Import this JSON to Google Slides API.",
+    });
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar onCreateReport={() => setIsCreateModalOpen(true)} />
@@ -287,367 +430,339 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="data-analysis">Data Analysis</TabsTrigger>
-              <TabsTrigger value="ai-preview">AI Insights</TabsTrigger>
-              <TabsTrigger value="collaboration">AI Assistant</TabsTrigger>
-            </TabsList>
+        <div className="p-6 space-y-8">
+          {/* Data Analysis Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  Data Upload
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DataImportPanel onAnalysisComplete={handleAnalysisComplete} />
+              </CardContent>
+            </Card>
 
-            <TabsContent value="overview" className="space-y-6">
-              {dashboardData ? (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2 space-y-6">
-                    {/* Revenue Overview */}
-                    {shouldShowChart('revenue') && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5" />
-                            Revenue Overview
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="h-80">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <LineChart data={dashboardData.revenue}>
-                                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                                <XAxis 
-                                  dataKey="month" 
-                                  className="text-gray-600 dark:text-gray-300"
-                                  tick={{ fill: 'currentColor' }}
-                                />
-                                <YAxis 
-                                  className="text-gray-600 dark:text-gray-300"
-                                  tick={{ fill: 'currentColor' }}
-                                />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
+            {analysisResults && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Download className="w-5 h-5" />
+                    Export Options
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {exportFormats.pdf && (
+                    <Button 
+                      onClick={exportToPDF} 
+                      className="w-full justify-start"
+                      disabled={isExporting}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      {isExporting ? 'Generating PDF...' : 'Export as PDF'}
+                    </Button>
+                  )}
+                  
+                  {exportFormats.csv && (
+                    <Button 
+                      onClick={exportToCSV}
+                      variant="outline" 
+                      className="w-full justify-start"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export as CSV
+                    </Button>
+                  )}
+                  
+                  {exportFormats.googleSlides && (
+                    <Button 
+                      onClick={exportToGoogleSlides}
+                      variant="outline" 
+                      className="w-full justify-start"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export to Google Slides
+                    </Button>
+                  )}
+                  
+                  {!exportFormats.pdf && !exportFormats.csv && !exportFormats.googleSlides && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                      No export formats enabled. Visit Settings to configure export options.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-                    {/* Charts Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {shouldShowChart('sales') && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">Sales Trends</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="h-48">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={dashboardData.sales}>
-                                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                                  <XAxis 
-                                    dataKey="period" 
-                                    className="text-gray-600 dark:text-gray-300"
-                                    tick={{ fill: 'currentColor' }}
-                                  />
-                                  <YAxis 
-                                    className="text-gray-600 dark:text-gray-300"
-                                    tick={{ fill: 'currentColor' }}
-                                  />
-                                  <Tooltip content={<CustomTooltip />} />
-                                  <Bar dataKey="sales" fill="#8884d8" />
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {shouldShowChart('distribution') && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">Data Distribution</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="h-48">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                  <Pie
-                                    data={dashboardData.distribution}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                    outerRadius={60}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                  >
-                                    {dashboardData.distribution.map((entry, index) => (
-                                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                  </Pie>
-                                  <Tooltip content={<CustomTooltip />} />
-                                </PieChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {shouldShowChart('customers') && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                              <Users className="w-5 h-5" />
-                              Customer Segments
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="h-48">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={dashboardData.customers}>
-                                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                                  <XAxis 
-                                    dataKey="segment" 
-                                    className="text-gray-600 dark:text-gray-300"
-                                    tick={{ fill: 'currentColor' }}
-                                  />
-                                  <YAxis 
-                                    className="text-gray-600 dark:text-gray-300"
-                                    tick={{ fill: 'currentColor' }}
-                                  />
-                                  <Tooltip content={<CustomTooltip />} />
-                                  <Bar dataKey="count" fill="#00C49F" />
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {shouldShowChart('products') && dashboardData.products.length > 0 && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                              <Target className="w-5 h-5" />
-                              Product Performance
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="h-48">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={dashboardData.products}>
-                                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                                  <XAxis 
-                                    dataKey="name" 
-                                    className="text-gray-600 dark:text-gray-300"
-                                    tick={{ fill: 'currentColor' }}
-                                  />
-                                  <YAxis 
-                                    className="text-gray-600 dark:text-gray-300"
-                                    tick={{ fill: 'currentColor' }}
-                                  />
-                                  <Tooltip content={<CustomTooltip />} />
-                                  <Bar dataKey="sales" fill="#FFBB28" />
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-lg">
-                            <Globe className="w-5 h-5" />
-                            Traffic Sources
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <PieChart>
-                                <Pie
-                                  data={dashboardData.traffic}
-                                  cx="50%"
-                                  cy="50%"
-                                  labelLine={false}
-                                  label={({ source, percentage }) => `${source} ${percentage}%`}
-                                  outerRadius={60}
-                                  fill="#8884d8"
-                                  dataKey="visitors"
-                                >
-                                  {dashboardData.traffic.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                  ))}
-                                </Pie>
-                                <Tooltip content={<CustomTooltip />} />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-lg">
-                            <MousePointer className="w-5 h-5" />
-                            Conversion Rate Trend
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="h-48">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <LineChart data={dashboardData.conversion}>
-                                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                                <XAxis 
-                                  dataKey="month" 
-                                  className="text-gray-600 dark:text-gray-300"
-                                  tick={{ fill: 'currentColor' }}
-                                />
-                                <YAxis 
-                                  className="text-gray-600 dark:text-gray-300"
-                                  tick={{ fill: 'currentColor' }}
-                                />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Line type="monotone" dataKey="rate" stroke="#FF8042" strokeWidth={2} />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </CardContent>
-                      </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Revenue Overview */}
+              {shouldShowChart('revenue') && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5" />
+                      Revenue Overview
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={dashboardData.revenue}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                          <XAxis 
+                            dataKey="month" 
+                            className="text-gray-600 dark:text-gray-300"
+                            tick={{ fill: 'currentColor' }}
+                          />
+                          <YAxis 
+                            className="text-gray-600 dark:text-gray-300"
+                            tick={{ fill: 'currentColor' }}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <BrainCircuit className="w-5 h-5" />
-                          AI Recommendations
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {analysisResults?.recommendations?.map((recommendation, index) => (
-                          <div key={index} className="text-sm p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
-                            {index + 1}. {recommendation}
-                          </div>
-                        )) || [
-                          "Focus on high-value customer segments for better ROI",
-                          "Optimize product mix based on performance metrics", 
-                          "Implement retention strategies for at-risk customers",
-                          "Scale successful marketing channels"
-                        ].map((rec, index) => (
-                          <div key={index} className="text-sm p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
-                            {index + 1}. {rec}
-                          </div>
-                        ))}
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Download className="w-5 h-5" />
-                          Export Results
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
-                          onClick={handleExportPDF}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Export as PDF
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <UploadCloud className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
-                    No Data Uploaded Yet
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6">
-                    Upload your business data to see comprehensive analytics and insights
-                  </p>
-                  <Button onClick={() => setActiveTab('data-analysis')}>
-                    <Database className="w-4 h-4 mr-2" />
-                    Upload Data
-                  </Button>
-                </div>
+                  </CardContent>
+                </Card>
               )}
-            </TabsContent>
 
-            <TabsContent value="data-analysis" className="space-y-6">
-              <DataImportPanel onAnalysisComplete={handleAnalysisComplete} />
-            </TabsContent>
+              {/* Charts Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {shouldShowChart('sales') && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Sales Trends</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dashboardData.sales}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                            <XAxis 
+                              dataKey="period" 
+                              className="text-gray-600 dark:text-gray-300"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <YAxis 
+                              className="text-gray-600 dark:text-gray-300"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Bar dataKey="sales" fill="#8884d8" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-            <TabsContent value="ai-preview" className="space-y-6">
+                {shouldShowChart('distribution') && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Data Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={dashboardData.distribution}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                              outerRadius={60}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {dashboardData.distribution.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip content={<CustomTooltip />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {shouldShowChart('customers') && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Users className="w-5 h-5" />
+                        Customer Segments
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dashboardData.customers}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                            <XAxis 
+                              dataKey="segment" 
+                              className="text-gray-600 dark:text-gray-300"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <YAxis 
+                              className="text-gray-600 dark:text-gray-300"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Bar dataKey="count" fill="#00C49F" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {shouldShowChart('products') && dashboardData.products.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Target className="w-5 h-5" />
+                        Product Performance
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dashboardData.products}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                            <XAxis 
+                              dataKey="name" 
+                              className="text-gray-600 dark:text-gray-300"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <YAxis 
+                              className="text-gray-600 dark:text-gray-300"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Bar dataKey="sales" fill="#FFBB28" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Globe className="w-5 h-5" />
+                      Traffic Sources
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={dashboardData.traffic}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ source, percentage }) => `${source} ${percentage}%`}
+                            outerRadius={60}
+                            fill="#8884d8"
+                            dataKey="visitors"
+                          >
+                            {dashboardData.traffic.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={<CustomTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <MousePointer className="w-5 h-5" />
+                      Conversion Rate Trend
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={dashboardData.conversion}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                          <XAxis 
+                            dataKey="month" 
+                            className="text-gray-600 dark:text-gray-300"
+                            tick={{ fill: 'currentColor' }}
+                          />
+                          <YAxis 
+                            className="text-gray-600 dark:text-gray-300"
+                            tick={{ fill: 'currentColor' }}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Line type="monotone" dataKey="rate" stroke="#FF8042" strokeWidth={2} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BrainCircuit className="w-5 h-5" />
-                    AI Insights & Analysis
+                    AI Recommendations
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {analysisResults ? (
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Analysis Summary</h3>
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                          <p className="text-gray-700 dark:text-gray-300">{analysisResults.summary}</p>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Key Metrics</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {analysisResults.keyMetrics?.map((metric: any, index: number) => (
-                            <div key={index} className="p-4 bg-white dark:bg-gray-800 border rounded-lg">
-                              <div className="text-sm text-gray-600 dark:text-gray-400">{metric.label}</div>
-                              <div className="text-xl font-bold">{metric.value}</div>
-                              <div className="text-sm text-green-600">{metric.change}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">AI Recommendations</h3>
-                        <div className="space-y-2">
-                          {analysisResults.recommendations?.map((rec: string, index: number) => (
-                            <div key={index} className="p-3 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-400 rounded">
-                              <p className="text-gray-700 dark:text-gray-300">{index + 1}. {rec}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                  {analysisResults?.recommendations?.map((recommendation, index) => (
+                    <div key={index} className="text-sm p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+                      {index + 1}. {recommendation}
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <BrainCircuit className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Analysis Available</h3>
-                      <p className="text-gray-600 dark:text-gray-300 mb-4">
-                        Upload your data in the Data Analysis tab to see AI-powered insights here.
-                      </p>
-                      <Button onClick={() => setActiveTab('data-analysis')}>
-                        <Database className="w-4 h-4 mr-2" />
-                        Start Analysis
-                      </Button>
+                  )) || [
+                    "Focus on high-value customer segments for better ROI",
+                    "Optimize product mix based on performance metrics", 
+                    "Implement retention strategies for at-risk customers",
+                    "Scale successful marketing channels"
+                  ].map((rec, index) => (
+                    <div key={index} className="text-sm p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+                      {index + 1}. {rec}
                     </div>
-                  )}
+                  ))}
                 </CardContent>
               </Card>
-            </TabsContent>
 
-            <TabsContent value="collaboration" className="space-y-6">
-              <CollaborationPanel />
-            </TabsContent>
-          </Tabs>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Download className="w-5 h-5" />
+                    Export Results
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleExportPDF}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export as PDF
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </main>
 
