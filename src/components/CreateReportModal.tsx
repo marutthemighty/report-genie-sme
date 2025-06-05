@@ -8,13 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  FileText, 
-  Upload, 
-  Calendar,
-  Database,
-  Target
-} from 'lucide-react';
+import { FileText, Upload, Calendar, Database, Target } from 'lucide-react';
 
 interface CreateReportModalProps {
   isOpen: boolean;
@@ -22,7 +16,7 @@ interface CreateReportModalProps {
   onSubmit: (data: any) => void;
 }
 
-const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps) => {
+const CreateReportModal: React.FC<CreateReportModalProps> = ({ isOpen, onClose, onSubmit }) => {
   const [reportData, setReportData] = useState({
     name: '',
     type: '',
@@ -35,7 +29,7 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
 
   const reportTypes = [
     'Sales Performance',
-    'Cart Abandonment', 
+    'Cart Abandonment',
     'Product Performance',
     'Customer Acquisition',
     'Marketing RoI',
@@ -74,7 +68,7 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
     if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const content = e.target?.result as string;
+        const content = e.target?.result;
         setReportData(prev => ({
           ...prev,
           uploadedFile: {
@@ -84,10 +78,9 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
             content: content
           }
         }));
-        
         toast({
           title: "File Uploaded",
-          description: `${file.name} has been uploaded successfully.`,
+          description: `${file.name} has been uploaded successfully.`
         });
       };
       reader.readAsText(file);
@@ -113,10 +106,8 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
     }
 
     setIsSubmitting(true);
-    
     try {
       await onSubmit(reportData);
-      
       // Reset form
       setReportData({
         name: '',
@@ -125,7 +116,6 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
         dateRange: '',
         uploadedFile: null
       });
-      
       onClose();
     } catch (error) {
       console.error('Error creating report:', error);
@@ -154,7 +144,7 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
             Create New Report
           </DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -167,23 +157,16 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
                 required
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="reportType">Report Type *</Label>
-              <Select 
-                value={reportData.type} 
-                onValueChange={(value) => setReportData(prev => ({ ...prev, type: value }))}
-              >
+              <Select value={reportData.type} onValueChange={(value) => setReportData(prev => ({ ...prev, type: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
                 <SelectContent>
                   {reportTypes.map((type) => (
                     <SelectItem key={type} value={type}>
-                      <div className="flex items-center gap-2">
-                        <Target className="w-4 h-4" />
-                        {type}
-                      </div>
+                      {type}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -194,42 +177,29 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="dataSource">Data Source *</Label>
-              <Select 
-                value={reportData.dataSource} 
-                onValueChange={(value) => setReportData(prev => ({ ...prev, dataSource: value }))}
-              >
+              <Select value={reportData.dataSource} onValueChange={(value) => setReportData(prev => ({ ...prev, dataSource: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select data source" />
                 </SelectTrigger>
                 <SelectContent>
                   {dataSources.map((source) => (
                     <SelectItem key={source} value={source}>
-                      <div className="flex items-center gap-2">
-                        <Database className="w-4 h-4" />
-                        {source}
-                      </div>
+                      {source}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="dateRange">Date Range *</Label>
-              <Select 
-                value={reportData.dateRange} 
-                onValueChange={(value) => setReportData(prev => ({ ...prev, dateRange: value }))}
-              >
+              <Select value={reportData.dateRange} onValueChange={(value) => setReportData(prev => ({ ...prev, dateRange: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select date range" />
                 </SelectTrigger>
                 <SelectContent>
                   {dateRanges.map((range) => (
                     <SelectItem key={range} value={range}>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        {range}
-                      </div>
+                      {range}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -240,51 +210,35 @@ const CreateReportModal = ({ isOpen, onClose, onSubmit }: CreateReportModalProps
           {reportData.dataSource === 'Manual Upload' && (
             <Card>
               <CardContent className="pt-6">
-                <div className="space-y-2">
-                  <Label>Upload Data File (Optional)</Label>
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                      Upload your CSV file for data analysis
-                    </p>
-                    <FileUpload
-                      accept=".csv"
-                      onFileUpload={handleFileUpload}
-                      className="w-full"
-                    />
-                    {reportData.uploadedFile && (
-                      <div className="mt-3 p-2 bg-green-50 dark:bg-green-900/20 rounded text-sm text-green-700 dark:text-green-300">
-                        ✅ {reportData.uploadedFile.name} uploaded ({(reportData.uploadedFile.size / 1024).toFixed(1)} KB)
-                      </div>
-                    )}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Upload className="w-5 h-5 text-blue-600" />
+                    <Label className="text-base font-medium">Upload Data File</Label>
                   </div>
+                  <FileUpload
+                    accept=".csv"
+                    onFileUpload={handleFileUpload}
+                    className="w-full"
+                  />
+                  {reportData.uploadedFile && (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <FileText className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                        {reportData.uploadedFile.name} ({Math.round(reportData.uploadedFile.size / 1024)} KB)
+                      </span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
 
           <div className="flex gap-3 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleClose}
-              className="flex-1"
-            >
+            <Button type="button" variant="outline" onClick={handleClose} className="flex-1">
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="flex-1"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating...
-                </>
-              ) : (
-                'Create Report'
-              )}
+            <Button type="submit" disabled={isSubmitting} className="flex-1">
+              {isSubmitting ? 'Creating...' : 'Create Report'}
             </Button>
           </div>
         </form>

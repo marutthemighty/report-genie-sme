@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -233,11 +234,12 @@ const Index = () => {
         throw new Error('No PDF data received from server');
       }
 
-      // Create a printable HTML page that can be saved as PDF
+      // Create a printable HTML page with proper title
       const htmlContent = atob(data.pdf);
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(htmlContent);
+        printWindow.document.title = 'Dashboard Analysis Report';
         printWindow.document.close();
         
         // Trigger print dialog
