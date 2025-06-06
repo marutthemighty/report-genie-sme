@@ -38,7 +38,15 @@ import {
   Globe,
   MousePointer
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useAnalysisStore } from '@/stores/useAnalysisStore';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { exportData } from '@/utils/exportUtils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
@@ -49,7 +57,8 @@ const Index = () => {
   const { toast } = useToast();
   const { reports, loading, createReport } = useReports();
   const [activeTab, setActiveTab] = useState('overview');
-  const [analysisResults, setAnalysisResults] = useState(null);
+  const { analysisResults, setAnalysisResults } = useAnalysisStore();
+  const { settings } = useUserSettings();
 
   useEffect(() => {
     if (location.state?.openCreateModal) {
@@ -204,7 +213,7 @@ const Index = () => {
     return null;
   };
 
-  const handleExportPDF = async () => {
+  const handleExport = async (format: 'pdf' | 'csv' | 'googleSlides') => {
     try {
       if (!analysisResults) {
         toast({
@@ -215,48 +224,32 @@ const Index = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('generate-pdf', {
-        body: { 
-          reportData: analysisResults,
-          reportTitle: 'Dashboard Analysis Report',
-          reportType: 'Dashboard Overview',
-          includeCharts: true,
-          chartData: analysisResults.chartData
-        }
+      // Check if user has enabled this export format
+      if (!settings.export_formats[format]) {
+        toast({
+          title: "Export Format Disabled",
+          description: `${format.toUpperCase()} export is disabled in your settings. Please enable it in Settings > Export Formats.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      await exportData({
+        format,
+        data: analysisResults,
+        title: 'Dashboard Analysis Report',
+        includeCharts: true
       });
 
-      if (error) {
-        console.error('PDF generation error:', error);
-        throw error;
-      }
-
-      if (!data || !data.pdf) {
-        throw new Error('No PDF data received from server');
-      }
-
-      // Create a printable HTML page with proper title
-      const htmlContent = atob(data.pdf);
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(htmlContent);
-        printWindow.document.title = 'Dashboard Analysis Report';
-        printWindow.document.close();
-        
-        // Trigger print dialog
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-      }
-
       toast({
-        title: "PDF Ready",
-        description: "Your report is ready for printing or saving as PDF.",
+        title: "Export Complete",
+        description: `Your report has been exported as ${format.toUpperCase()}.`,
       });
     } catch (error) {
       console.error('Export error:', error);
       toast({
         title: "Export Failed",
-        description: "Failed to generate PDF. Please try again.",
+        description: "Failed to export report. Please try again.",
         variant: "destructive"
       });
     }
@@ -551,15 +544,32 @@ const Index = () => {
                           Export Results
                         </CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
-                          onClick={handleExportPDF}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Export as PDF
-                        </Button>
+                      <CardContent className="space-y-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                              <Download className="w-4 h-4 mr-2" />
+                              Export Report
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            {settings.export_formats.pdf && (
+                              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                                Export as PDF
+                              </DropdownMenuItem>
+                            )}
+                            {settings.export_formats.csv && (
+                              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                                Export as CSV
+                              </DropdownMenuItem>
+                            )}
+                            {settings.export_formats.googleSlides && (
+                              <DropdownMenuItem onClick={() => handleExport('googleSlides')}>
+                                Export as Google Slides
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </CardContent>
                     </Card>
                   </div>

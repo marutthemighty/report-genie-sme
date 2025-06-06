@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, 
@@ -33,6 +40,8 @@ import {
 import Sidebar from '@/components/Sidebar';
 import CreateReportModal from '@/components/CreateReportModal';
 import { useReports } from '@/hooks/useReports';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { exportData } from '@/utils/exportUtils';
 
 const Reports = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,6 +53,7 @@ const Reports = () => {
   const [selectedReports, setSelectedReports] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { settings } = useUserSettings();
   
   const { reports, loading, createReport, deleteReport } = useReports();
 
@@ -135,53 +145,41 @@ const Reports = () => {
     }
   };
 
-  const handleDownload = (report: any) => {
+  const handleDownload = async (report: any, format: 'pdf' | 'csv' | 'googleSlides') => {
     try {
-      let content = '';
-      let fileName = '';
-      let mimeType = '';
-
-      if (report.html_content) {
-        content = report.html_content;
-        fileName = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.html`;
-        mimeType = 'text/html';
-      } else {
-        content = `
-${report.name}
-Generated on: ${new Date(report.created_at).toLocaleDateString()}
-
-Report Type: ${report.report_type}
-Data Source: ${report.data_source}
-Date Range: ${report.date_range}
-Status: ${report.status}
-
-AI Summary:
-${report.ai_summary || 'No AI summary available.'}
-
-AI Predictions:
-${report.ai_prediction || 'No AI predictions available.'}
-
-Report ID: ${report.id}
-Created By: ${report.created_by}
-Generated At: ${new Date(report.generated_at).toLocaleString()}
-        `.trim();
-        fileName = `${report.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.txt`;
-        mimeType = 'text/plain';
+      // Check if user has enabled this export format
+      if (!settings.export_formats[format]) {
+        toast({
+          title: "Export Format Disabled",
+          description: `${format.toUpperCase()} export is disabled in your settings. Please enable it in Settings > Export Formats.`,
+          variant: "destructive"
+        });
+        return;
       }
 
-      const blob = new Blob([content], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const reportData = {
+        summary: report.ai_summary || 'No summary available',
+        keyMetrics: [
+          { label: 'Report Type', value: report.report_type, change: '' },
+          { label: 'Data Source', value: report.data_source, change: '' },
+          { label: 'Status', value: report.status, change: '' },
+          { label: 'Date Range', value: report.date_range, change: '' }
+        ],
+        recommendations: report.ai_prediction ? [report.ai_prediction] : [],
+        chartData: {},
+        datasetInfo: report.dataset_info
+      };
+
+      await exportData({
+        format,
+        data: reportData,
+        title: report.name,
+        includeCharts: false
+      });
 
       toast({
         title: "Download Complete",
-        description: `Report "${report.name}" has been downloaded.`,
+        description: `Report "${report.name}" has been downloaded as ${format.toUpperCase()}.`,
       });
     } catch (error) {
       console.error('Download error:', error);
@@ -193,7 +191,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
     }
   };
 
-  const handleBulkDownload = () => {
+  const handleBulkDownload = async (format: 'pdf' | 'csv' | 'googleSlides') => {
     try {
       if (selectedReports.size === 0) {
         toast({
@@ -206,13 +204,14 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
 
       const selectedReportData = filteredReports.filter(report => selectedReports.has(report.id));
       
-      selectedReportData.forEach(report => {
-        setTimeout(() => handleDownload(report), 100); // Small delay between downloads
-      });
+      for (const report of selectedReportData) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between downloads
+        await handleDownload(report, format);
+      }
 
       toast({
-        title: "Bulk Download Started",
-        description: `Downloading ${selectedReports.size} selected reports.`,
+        title: "Bulk Download Complete",
+        description: `Downloaded ${selectedReports.size} reports as ${format.toUpperCase()}.`,
       });
 
       setSelectedReports(new Set()); // Clear selection after download
@@ -226,7 +225,7 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
     }
   };
 
-  const handleExportAll = () => {
+  const handleExportAll = async (format: 'pdf' | 'csv' | 'googleSlides') => {
     try {
       if (filteredReports.length === 0) {
         toast({
@@ -237,43 +236,33 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
         return;
       }
 
-      let allReportsContent = `All Reports Export\nGenerated on: ${new Date().toLocaleDateString()}\nTotal Reports: ${filteredReports.length}\n\n`;
-      
-      filteredReports.forEach((report, index) => {
-        allReportsContent += `
-========== REPORT ${index + 1} ==========
-Name: ${report.name}
-Type: ${report.report_type}
-Data Source: ${report.data_source}
-Date Range: ${report.date_range}
-Status: ${report.status}
-Created: ${new Date(report.created_at).toLocaleDateString()}
+      // Create a combined export of all reports
+      const allReportsData = {
+        summary: `Export of ${filteredReports.length} reports generated on ${new Date().toLocaleDateString()}`,
+        keyMetrics: [
+          { label: 'Total Reports', value: filteredReports.length.toString(), change: '' },
+          { label: 'Generated Reports', value: filteredReports.filter(r => r.status === 'Generated').length.toString(), change: '' },
+          { label: 'Pending Reports', value: filteredReports.filter(r => r.status === 'Pending').length.toString(), change: '' }
+        ],
+        recommendations: [
+          'Review pending reports and complete generation',
+          'Analyze report performance metrics',
+          'Consider automating recurring reports'
+        ],
+        chartData: {},
+        reports: filteredReports
+      };
 
-AI Summary:
-${report.ai_summary || 'No AI summary available.'}
-
-AI Predictions:
-${report.ai_prediction || 'No AI predictions available.'}
-
-Report ID: ${report.id}
-Generated At: ${new Date(report.generated_at).toLocaleString()}
-
-`;
+      await exportData({
+        format,
+        data: allReportsData,
+        title: `All_Reports_Export_${new Date().toISOString().split('T')[0]}`,
+        includeCharts: false
       });
-
-      const blob = new Blob([allReportsContent], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `all_reports_export_${new Date().toISOString().split('T')[0]}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
 
       toast({
         title: "Export Complete",
-        description: `${filteredReports.length} reports have been exported successfully.`,
+        description: `${filteredReports.length} reports have been exported as ${format.toUpperCase()}.`,
       });
     } catch (error) {
       console.error('Export all error:', error);
@@ -411,23 +400,64 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Bulk Actions</label>
                 <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleBulkDownload}
-                    disabled={selectedReports.size === 0}
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    Download ({selectedReports.size})
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleExportAll}
-                    disabled={filteredReports.length === 0}
-                  >
-                    Export All
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled={selectedReports.size === 0}
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        Download ({selectedReports.size})
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {settings.export_formats.pdf && (
+                        <DropdownMenuItem onClick={() => handleBulkDownload('pdf')}>
+                          Download as PDF
+                        </DropdownMenuItem>
+                      )}
+                      {settings.export_formats.csv && (
+                        <DropdownMenuItem onClick={() => handleBulkDownload('csv')}>
+                          Download as CSV
+                        </DropdownMenuItem>
+                      )}
+                      {settings.export_formats.googleSlides && (
+                        <DropdownMenuItem onClick={() => handleBulkDownload('googleSlides')}>
+                          Download as Google Slides
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled={filteredReports.length === 0}
+                      >
+                        Export All
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {settings.export_formats.pdf && (
+                        <DropdownMenuItem onClick={() => handleExportAll('pdf')}>
+                          Export All as PDF
+                        </DropdownMenuItem>
+                      )}
+                      {settings.export_formats.csv && (
+                        <DropdownMenuItem onClick={() => handleExportAll('csv')}>
+                          Export All as CSV
+                        </DropdownMenuItem>
+                      )}
+                      {settings.export_formats.googleSlides && (
+                        <DropdownMenuItem onClick={() => handleExportAll('googleSlides')}>
+                          Export All as Google Slides
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </CardContent>
@@ -454,110 +484,136 @@ Generated At: ${new Date(report.generated_at).toLocaleString()}
                   </Button>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedReports.size === filteredReports.length && filteredReports.length > 0}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
-                      <TableHead className="cursor-pointer">
-                        <div className="flex items-center gap-1">
-                          Name
-                          <ArrowUpDown className="w-4 h-4" />
-                        </div>
-                      </TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>
-                        <div className="flex items-center gap-1">
-                          <Database className="w-4 h-4" />
-                          Data Source
-                        </div>
-                      </TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          Created
-                        </div>
-                      </TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredReports.map((report) => (
-                      <TableRow key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">
                           <Checkbox
-                            checked={selectedReports.has(report.id)}
-                            onCheckedChange={(checked) => handleSelectReport(report.id, checked as boolean)}
+                            checked={selectedReports.size === filteredReports.length && filteredReports.length > 0}
+                            onCheckedChange={handleSelectAll}
                           />
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div>
-                            <div>{report.name}</div>
-                            {report.dataset_info && (
-                              <div className="text-xs text-green-600">
-                                📊 Dataset: {report.dataset_info.fileName}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{report.report_type}</Badge>
-                        </TableCell>
-                        <TableCell>{report.data_source}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(report.status)}>
-                            {report.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(report.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
+                        </TableHead>
+                        <TableHead className="cursor-pointer min-w-[200px] max-w-[250px]">
                           <div className="flex items-center gap-1">
-                            {report.html_content && (
+                            Name
+                            <ArrowUpDown className="w-4 h-4" />
+                          </div>
+                        </TableHead>
+                        <TableHead className="min-w-[120px]">Type</TableHead>
+                        <TableHead className="min-w-[140px]">
+                          <div className="flex items-center gap-1">
+                            <Database className="w-4 h-4" />
+                            Data Source
+                          </div>
+                        </TableHead>
+                        <TableHead className="min-w-[100px]">Status</TableHead>
+                        <TableHead className="min-w-[120px]">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            Created
+                          </div>
+                        </TableHead>
+                        <TableHead className="min-w-[200px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredReports.map((report) => (
+                        <TableRow key={report.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedReports.has(report.id)}
+                              onCheckedChange={(checked) => handleSelectReport(report.id, checked as boolean)}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div className="max-w-[240px]">
+                              <div className="truncate" title={report.name}>{report.name}</div>
+                              {report.dataset_info && (
+                                <div className="text-xs text-green-600 truncate" title={`Dataset: ${report.dataset_info.fileName}`}>
+                                  📊 Dataset: {report.dataset_info.fileName}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">{report.report_type}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="truncate max-w-[130px]" title={report.data_source}>
+                              {report.data_source}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`${getStatusColor(report.status)} text-xs`}>
+                              {report.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(report.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {report.html_content && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleViewReport(report)}
+                                  title="View Report"
+                                >
+                                  <TrendingUp className="w-4 h-4" />
+                                </Button>
+                              )}
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                onClick={() => handleViewReport(report)}
-                                title="View Report"
+                                onClick={() => handleEdit(report.id, report.name)}
+                                title="Edit Report"
                               >
-                                <TrendingUp className="w-4 h-4" />
+                                <Edit className="w-4 h-4" />
                               </Button>
-                            )}
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleEdit(report.id, report.name)}
-                              title="Edit Report"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDownload(report)}
-                              title="Download Report"
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-red-600"
-                              onClick={() => handleDelete(report.id)}
-                              title="Delete Report"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    title="Download Report"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  {settings.export_formats.pdf && (
+                                    <DropdownMenuItem onClick={() => handleDownload(report, 'pdf')}>
+                                      Download as PDF
+                                    </DropdownMenuItem>
+                                  )}
+                                  {settings.export_formats.csv && (
+                                    <DropdownMenuItem onClick={() => handleDownload(report, 'csv')}>
+                                      Download as CSV
+                                    </DropdownMenuItem>
+                                  )}
+                                  {settings.export_formats.googleSlides && (
+                                    <DropdownMenuItem onClick={() => handleDownload(report, 'googleSlides')}>
+                                      Download as Google Slides
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-red-600"
+                                onClick={() => handleDelete(report.id)}
+                                title="Delete Report"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>

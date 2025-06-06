@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,25 +24,14 @@ import {
 import Sidebar from '@/components/Sidebar';
 import ConsentModal from '@/components/ConsentModal';
 import { useThemeStore } from '@/stores/useThemeStore';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 const Settings = () => {
   const { theme, setTheme } = useThemeStore();
   const { toast } = useToast();
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(false);
+  const { settings, loading, updateExportFormats, updateNotifications, updatePrivacySettings } = useUserSettings();
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  
-  // Realistic integration states - all start as disconnected
-  const [integrations, setIntegrations] = useState([
-    { id: 1, name: 'Shopify', status: 'disconnected', lastSync: 'Never', apiKey: '' },
-    { id: 2, name: 'Google Analytics', status: 'disconnected', lastSync: 'Never', apiKey: '' },
-  ]);
-
-  const handleAddIntegration = () => {
-    // Navigate to integrations page or open integration modal
-    window.location.href = '/integrations';
-  };
 
   const handleExportData = async () => {
     setIsExporting(true);
@@ -53,7 +42,6 @@ const Settings = () => {
 
     // Simulate export process
     setTimeout(() => {
-      // Create a sample CSV file
       const csvContent = `Date,Report Type,Status,Created By
 ${new Date().toISOString().split('T')[0]},Sales Performance,Completed,User
 ${new Date().toISOString().split('T')[0]},Customer Analysis,Completed,User
@@ -70,6 +58,10 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
       window.URL.revokeObjectURL(url);
 
       setIsExporting(false);
+      
+      // Update privacy settings to mark data export as used
+      updatePrivacySettings({ dataExportEnabled: true });
+      
       toast({
         title: "Data Export Complete",
         description: "Your data has been exported and downloaded successfully.",
@@ -78,12 +70,8 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
   };
 
   const handleViewPrivacySettings = () => {
-    toast({
-      title: "Privacy Settings",
-      description: "Opening privacy dashboard...",
-    });
+    const currentSettings = settings.privacy_settings;
     
-    // Create a simple privacy settings modal/page
     const privacyWindow = window.open('', '_blank', 'width=800,height=600');
     if (privacyWindow) {
       privacyWindow.document.write(`
@@ -92,12 +80,16 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
         <head>
           <title>Privacy Settings</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
-            .container { max-width: 600px; margin: 0 auto; }
-            .setting { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+            body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .setting { margin: 20px 0; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa; }
+            .setting h3 { margin-top: 0; color: #333; }
             .toggle { display: inline-block; margin-left: 10px; }
-            button { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+            button { background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; margin-top: 20px; }
             button:hover { background: #2563eb; }
+            label { display: block; margin: 10px 0; cursor: pointer; }
+            input[type="checkbox"] { margin-right: 8px; }
+            .saved-status { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin-top: 10px; }
           </style>
         </head>
         <body>
@@ -106,27 +98,53 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
             <div class="setting">
               <h3>Data Collection</h3>
               <p>Control how we collect and use your data for analytics and service improvement.</p>
-              <label><input type="checkbox" checked> Analytics tracking</label><br>
-              <label><input type="checkbox" checked> Performance monitoring</label><br>
-              <label><input type="checkbox"> Marketing communications</label>
+              <label><input type="checkbox" id="analytics" ${currentSettings.analytics ? 'checked' : ''}> Analytics tracking</label>
+              <label><input type="checkbox" id="storage" ${currentSettings.storage ? 'checked' : ''}> Performance monitoring</label>
+              <label><input type="checkbox" id="marketing" ${currentSettings.marketing ? 'checked' : ''}> Marketing communications</label>
             </div>
             <div class="setting">
               <h3>Cookie Preferences</h3>
               <p>Manage which cookies we can store on your device.</p>
-              <label><input type="checkbox" checked disabled> Essential cookies (required)</label><br>
-              <label><input type="checkbox" checked> Functional cookies</label><br>
-              <label><input type="checkbox"> Marketing cookies</label>
+              <label><input type="checkbox" checked disabled> Essential cookies (required)</label>
+              <label><input type="checkbox" id="functional" checked> Functional cookies</label>
+              <label><input type="checkbox" id="marketing-cookies" ${currentSettings.marketing ? 'checked' : ''}> Marketing cookies</label>
             </div>
             <div class="setting">
               <h3>Data Retention</h3>
               <p>Your data is retained for 2 years after account deletion, as required by law.</p>
-              <button onclick="alert('Settings saved!')">Save Privacy Settings</button>
+              <button onclick="savePrivacySettings()">Save Privacy Settings</button>
+              <div id="savedStatus" class="saved-status" style="display: none;">Settings saved successfully!</div>
             </div>
           </div>
+          <script>
+            function savePrivacySettings() {
+              const analytics = document.getElementById('analytics').checked;
+              const storage = document.getElementById('storage').checked;
+              const marketing = document.getElementById('marketing').checked;
+              
+              // Save to parent window
+              if (window.opener && window.opener.updatePrivacySettings) {
+                window.opener.updatePrivacySettings({
+                  analytics: analytics,
+                  storage: storage,
+                  marketing: marketing,
+                  privacySettingsConfigured: true
+                });
+              }
+              
+              document.getElementById('savedStatus').style.display = 'block';
+              setTimeout(() => {
+                window.close();
+              }, 1500);
+            }
+          </script>
         </body>
         </html>
       `);
       privacyWindow.document.close();
+      
+      // Make the function available to the popup
+      (window as any).updatePrivacySettings = updatePrivacySettings;
     }
   };
 
@@ -143,6 +161,17 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
       });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+        <Sidebar />
+        <main className="flex-1 flex items-center justify-center">
+          <div>Loading settings...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -188,7 +217,7 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
             </CardContent>
           </Card>
 
-          {/* Integrations */}
+          {/* Data Integrations - Only show connected integrations */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -199,16 +228,16 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Connect your data sources to generate comprehensive reports
+                  Connected data sources for report generation
                 </p>
-                <Button onClick={handleAddIntegration} size="sm">
+                <Button onClick={() => window.location.href = '/integrations'} size="sm">
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Integration
+                  Manage Integrations
                 </Button>
               </div>
               
               <div className="space-y-3">
-                {integrations.map((integration) => (
+                {settings.connected_integrations.filter(int => int.status === 'connected').map((integration) => (
                   <div key={integration.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <Key className="w-4 h-4 text-gray-400" />
@@ -218,21 +247,19 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={integration.status === 'connected' ? 'default' : 'secondary'}>
-                        {integration.status}
-                      </Badge>
-                      <Button variant="outline" size="sm" onClick={handleAddIntegration}>
-                        {integration.status === 'connected' ? 'Configure' : 'Connect'}
+                      <Badge variant="default">connected</Badge>
+                      <Button variant="outline" size="sm" onClick={() => window.location.href = '/integrations'}>
+                        Configure
                       </Button>
                     </div>
                   </div>
                 ))}
                 
-                {integrations.length === 0 && (
+                {settings.connected_integrations.filter(int => int.status === 'connected').length === 0 && (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <Database className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No integrations connected yet</p>
-                    <p className="text-sm">Click "Add Integration" to get started</p>
+                    <p className="text-sm">Visit the Integrations page to connect your data sources</p>
                   </div>
                 )}
               </div>
@@ -250,15 +277,27 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-2">
-                  <Switch id="pdf-export" defaultChecked />
+                  <Switch 
+                    id="pdf-export" 
+                    checked={settings.export_formats.pdf}
+                    onCheckedChange={(checked) => updateExportFormats({ pdf: checked })}
+                  />
                   <Label htmlFor="pdf-export">PDF Reports</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch id="csv-export" defaultChecked />
+                  <Switch 
+                    id="csv-export" 
+                    checked={settings.export_formats.csv}
+                    onCheckedChange={(checked) => updateExportFormats({ csv: checked })}
+                  />
                   <Label htmlFor="csv-export">CSV Data</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch id="slides-export" />
+                  <Switch 
+                    id="slides-export" 
+                    checked={settings.export_formats.googleSlides}
+                    onCheckedChange={(checked) => updateExportFormats({ googleSlides: checked })}
+                  />
                   <Label htmlFor="slides-export">Google Slides</Label>
                 </div>
               </div>
@@ -284,8 +323,8 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
                   </div>
                   <Switch
                     id="email-notifications"
-                    checked={emailNotifications}
-                    onCheckedChange={setEmailNotifications}
+                    checked={settings.notification_email}
+                    onCheckedChange={(checked) => updateNotifications({ email: checked })}
                   />
                 </div>
                 
@@ -298,15 +337,15 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
                   </div>
                   <Switch
                     id="push-notifications"
-                    checked={pushNotifications}
-                    onCheckedChange={setPushNotifications}
+                    checked={settings.notification_push}
+                    onCheckedChange={(checked) => updateNotifications({ push: checked })}
                   />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* GDPR/CCPA */}
+          {/* Privacy & Data */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

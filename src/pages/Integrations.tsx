@@ -19,149 +19,202 @@ import {
   EyeOff
 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
+import { validateApiKey, getApiKeyFormat } from '@/utils/apiValidation';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 const Integrations = () => {
   const { toast } = useToast();
-  const [integrations, setIntegrations] = useState([
-    {
-      id: 1,
-      name: 'Shopify',
-      description: 'E-commerce platform for online stores and retail point-of-sale systems',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '🛍️',
+  const { settings, updateConnectedIntegrations } = useUserSettings();
+  
+  // Initialize integrations from settings or defaults
+  const [integrations, setIntegrations] = useState(settings.connected_integrations.length > 0 ? 
+    settings.connected_integrations.map(savedInt => ({
+      id: parseInt(savedInt.id),
+      name: savedInt.name,
+      description: getIntegrationDescription(savedInt.name),
+      status: savedInt.status,
+      lastSync: savedInt.lastSync,
+      enabled: savedInt.status === 'connected',
+      apiKey: savedInt.apiKey,
+      logo: getIntegrationLogo(savedInt.name),
       isConnecting: false,
       showApiKey: false
-    },
-    {
-      id: 2,
-      name: 'Google Analytics',
-      description: 'Web analytics service for tracking website traffic and user behavior',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '📊',
-      isConnecting: false,
-      showApiKey: false
-    },
-    {
-      id: 3,
-      name: 'Amazon Seller Central',
-      description: 'Platform for managing Amazon marketplace sales and inventory',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '📦',
-      isConnecting: false,
-      showApiKey: false
-    },
-    {
-      id: 4,
-      name: 'WooCommerce',
-      description: 'WordPress e-commerce plugin for online stores',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '🛒',
-      isConnecting: false,
-      showApiKey: false
-    },
-    {
-      id: 5,
-      name: 'Facebook Ads',
-      description: 'Social media advertising platform for targeted marketing campaigns',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '📘',
-      isConnecting: false,
-      showApiKey: false
-    },
-    {
-      id: 6,
-      name: 'Instagram',
-      description: 'Social media platform for visual content and business engagement',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '📷',
-      isConnecting: false,
-      showApiKey: false
-    },
-    {
-      id: 7,
-      name: 'BigCommerce',
-      description: 'E-commerce platform for growing and established businesses',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '🏪',
-      isConnecting: false,
-      showApiKey: false
-    },
-    {
-      id: 8,
-      name: 'Etsy',
-      description: 'Marketplace for unique and creative goods',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '🎨',
-      isConnecting: false,
-      showApiKey: false
-    },
-    {
-      id: 9,
-      name: 'Square',
-      description: 'Payment processing and point-of-sale solutions',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '⬜',
-      isConnecting: false,
-      showApiKey: false
-    },
-    {
-      id: 10,
-      name: 'Wix Commerce',
-      description: 'Website builder with integrated e-commerce capabilities',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '🌐',
-      isConnecting: false,
-      showApiKey: false
-    },
-    {
-      id: 11,
-      name: 'Adobe Commerce',
-      description: 'Enterprise e-commerce platform formerly known as Magento',
-      status: 'disconnected',
-      lastSync: 'Never',
-      enabled: false,
-      apiKey: '',
-      logo: '🔺',
-      isConnecting: false,
-      showApiKey: false
-    }
-  ]);
+    })) :
+    [
+      {
+        id: 1,
+        name: 'Shopify',
+        description: 'E-commerce platform for online stores and retail point-of-sale systems',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '🛍️',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 2,
+        name: 'Google Analytics',
+        description: 'Web analytics service for tracking website traffic and user behavior',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '📊',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 3,
+        name: 'Amazon Seller Central',
+        description: 'Platform for managing Amazon marketplace sales and inventory',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '📦',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 4,
+        name: 'WooCommerce',
+        description: 'WordPress e-commerce plugin for online stores',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '🛒',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 5,
+        name: 'Facebook Ads',
+        description: 'Social media advertising platform for targeted marketing campaigns',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '📘',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 6,
+        name: 'Instagram',
+        description: 'Social media platform for visual content and business engagement',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '📷',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 7,
+        name: 'BigCommerce',
+        description: 'E-commerce platform for growing and established businesses',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '🏪',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 8,
+        name: 'Etsy',
+        description: 'Marketplace for unique and creative goods',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '🎨',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 9,
+        name: 'Square',
+        description: 'Payment processing and point-of-sale solutions',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '⬜',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 10,
+        name: 'Wix Commerce',
+        description: 'Website builder with integrated e-commerce capabilities',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '🌐',
+        isConnecting: false,
+        showApiKey: false
+      },
+      {
+        id: 11,
+        name: 'Adobe Commerce',
+        description: 'Enterprise e-commerce platform formerly known as Magento',
+        status: 'disconnected',
+        lastSync: 'Never',
+        enabled: false,
+        apiKey: '',
+        logo: '🔺',
+        isConnecting: false,
+        showApiKey: false
+      }
+    ]
+  );
 
   const [newIntegration, setNewIntegration] = useState({
     name: '',
     apiKey: '',
     webhookUrl: ''
   });
+
+  function getIntegrationDescription(name: string): string {
+    const descriptions: { [key: string]: string } = {
+      'Shopify': 'E-commerce platform for online stores and retail point-of-sale systems',
+      'Google Analytics': 'Web analytics service for tracking website traffic and user behavior',
+      'Amazon Seller Central': 'Platform for managing Amazon marketplace sales and inventory',
+      'WooCommerce': 'WordPress e-commerce plugin for online stores',
+      'Facebook Ads': 'Social media advertising platform for targeted marketing campaigns',
+      'Instagram': 'Social media platform for visual content and business engagement',
+      'BigCommerce': 'E-commerce platform for growing and established businesses',
+      'Etsy': 'Marketplace for unique and creative goods',
+      'Square': 'Payment processing and point-of-sale solutions',
+      'Wix Commerce': 'Website builder with integrated e-commerce capabilities',
+      'Adobe Commerce': 'Enterprise e-commerce platform formerly known as Magento'
+    };
+    return descriptions[name] || 'Custom integration';
+  }
+
+  function getIntegrationLogo(name: string): string {
+    const logos: { [key: string]: string } = {
+      'Shopify': '🛍️',
+      'Google Analytics': '📊',
+      'Amazon Seller Central': '📦',
+      'WooCommerce': '🛒',
+      'Facebook Ads': '📘',
+      'Instagram': '📷',
+      'BigCommerce': '🏪',
+      'Etsy': '🎨',
+      'Square': '⬜',
+      'Wix Commerce': '🌐',
+      'Adobe Commerce': '🔺'
+    };
+    return logos[name] || '🔌';
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -190,6 +243,17 @@ const Integrations = () => {
       return;
     }
 
+    // Validate API key format
+    const isValidKey = await validateApiKey(integration.name, integration.apiKey);
+    if (!isValidKey) {
+      toast({
+        title: "Invalid API Key",
+        description: `Invalid API key format for ${integration.name}. ${getApiKeyFormat(integration.name)}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIntegrations(prev =>
       prev.map(integration =>
         integration.id === id
@@ -198,21 +262,35 @@ const Integrations = () => {
       )
     );
 
-    // Simulate API call
+    // Simulate API validation call
     setTimeout(() => {
-      setIntegrations(prev =>
-        prev.map(integration =>
-          integration.id === id
-            ? { 
-                ...integration, 
-                status: 'connected', 
-                lastSync: 'Just now',
-                enabled: true,
-                isConnecting: false
-              }
-            : integration
-        )
+      const updatedIntegrations = integrations.map(integration =>
+        integration.id === id
+          ? { 
+              ...integration, 
+              status: 'connected', 
+              lastSync: 'Just now',
+              enabled: true,
+              isConnecting: false
+            }
+          : integration
       );
+      
+      setIntegrations(updatedIntegrations);
+      
+      // Save to user settings
+      const connectedIntegrations = updatedIntegrations
+        .filter(int => int.status === 'connected')
+        .map(int => ({
+          id: int.id.toString(),
+          name: int.name,
+          status: int.status,
+          apiKey: int.apiKey,
+          lastSync: int.lastSync
+        }));
+      
+      updateConnectedIntegrations(connectedIntegrations);
+      
       toast({
         title: "Integration Connected",
         description: `${integration.name} has been successfully connected.`
@@ -221,19 +299,33 @@ const Integrations = () => {
   };
 
   const handleDisconnect = (id: number) => {
-    setIntegrations(prev =>
-      prev.map(integration =>
-        integration.id === id
-          ? { 
-              ...integration, 
-              status: 'disconnected', 
-              lastSync: 'Never', 
-              enabled: false,
-              apiKey: ''
-            }
-          : integration
-      )
+    const updatedIntegrations = integrations.map(integration =>
+      integration.id === id
+        ? { 
+            ...integration, 
+            status: 'disconnected', 
+            lastSync: 'Never', 
+            enabled: false,
+            apiKey: ''
+          }
+        : integration
     );
+    
+    setIntegrations(updatedIntegrations);
+    
+    // Update user settings
+    const connectedIntegrations = updatedIntegrations
+      .filter(int => int.status === 'connected')
+      .map(int => ({
+        id: int.id.toString(),
+        name: int.name,
+        status: int.status,
+        apiKey: int.apiKey,
+        lastSync: int.lastSync
+      }));
+    
+    updateConnectedIntegrations(connectedIntegrations);
+    
     toast({
       title: "Integration Disconnected",
       description: "The integration has been disconnected."
