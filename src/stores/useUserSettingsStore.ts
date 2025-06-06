@@ -119,9 +119,9 @@ export const useUserSettingsStore = create<UserSettingsState>()(
             theme: 'system',
             notification_email: settings.notifications.email,
             notification_push: settings.notifications.push,
-            export_formats: settings.exportFormats,
-            privacy_settings: settings.privacy,
-            connected_integrations: settings.connectedIntegrations,
+            export_formats: settings.exportFormats as any,
+            privacy_settings: settings.privacy as any,
+            connected_integrations: settings.connectedIntegrations as any,
             updated_at: new Date().toISOString(),
           };
           
