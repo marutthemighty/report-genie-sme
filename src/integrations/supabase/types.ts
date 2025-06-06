@@ -788,25 +788,34 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          connected_integrations: Json | null
           created_at: string | null
+          export_formats: Json | null
           notification_email: boolean | null
           notification_push: boolean | null
+          privacy_settings: Json | null
           theme: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          connected_integrations?: Json | null
           created_at?: string | null
+          export_formats?: Json | null
           notification_email?: boolean | null
           notification_push?: boolean | null
+          privacy_settings?: Json | null
           theme?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          connected_integrations?: Json | null
           created_at?: string | null
+          export_formats?: Json | null
           notification_email?: boolean | null
           notification_push?: boolean | null
+          privacy_settings?: Json | null
           theme?: string | null
           updated_at?: string | null
           user_id?: string
