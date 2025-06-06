@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,10 +29,15 @@ import {
   BarChart3,
   PieChart as PieChartIcon,
   TrendingDown,
-  Activity
+  Activity,
+  Brain,
+  MessageSquare,
+  Zap
 } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import DataImportPanel from '@/components/DataImportPanel';
+import AIInsightsDashboard from '@/components/AIInsightsDashboard';
+import AIFeedback from '@/components/AIFeedback';
 import { useUserSettingsStore } from '@/stores/useUserSettingsStore';
 
 const Dashboard = () => {
@@ -321,224 +327,240 @@ ${new Date().toISOString().split('T')[0]},Average Order Value,${(Math.random() *
           </section>
 
           {/* Overview Section */}
-          {uploadedFile && analysisResults && (
-            <section>
-              <div className="flex items-center gap-2 mb-4">
-                <BarChart3 className="w-6 h-6 text-green-600 dark:text-green-400" />
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Overview</h2>
-              </div>
-              
-              {/* Key Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Revenue</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">${(Math.random() * 100000 + 50000).toFixed(0)}</p>
-                      </div>
-                      <DollarSign className="w-8 h-8 text-green-600 dark:text-green-400" />
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Overview</h2>
+            </div>
+            
+            {/* Key Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Revenue</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">${(Math.random() * 100000 + 50000).toFixed(0)}</p>
                     </div>
-                    <div className="flex items-center mt-2">
-                      <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
-                      <span className="text-sm text-green-600 dark:text-green-400">+12.5%</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                    <DollarSign className="w-8 h-8 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex items-center mt-2">
+                    <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
+                    <span className="text-sm text-green-600 dark:text-green-400">+12.5%</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Orders</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{(Math.random() * 1000 + 500).toFixed(0)}</p>
-                      </div>
-                      <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Orders</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{(Math.random() * 1000 + 500).toFixed(0)}</p>
                     </div>
-                    <div className="flex items-center mt-2">
-                      <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
-                      <span className="text-sm text-green-600 dark:text-green-400">+8.2%</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                    <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex items-center mt-2">
+                    <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
+                    <span className="text-sm text-green-600 dark:text-green-400">+8.2%</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Customers</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{(Math.random() * 500 + 200).toFixed(0)}</p>
-                      </div>
-                      <Users className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Customers</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{(Math.random() * 500 + 200).toFixed(0)}</p>
                     </div>
-                    <div className="flex items-center mt-2">
-                      <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400 mr-1" />
-                      <span className="text-sm text-red-600 dark:text-red-400">-2.4%</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                    <Users className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex items-center mt-2">
+                    <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400 mr-1" />
+                    <span className="text-sm text-red-600 dark:text-red-400">-2.4%</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Avg Order Value</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">${(Math.random() * 100 + 50).toFixed(0)}</p>
-                      </div>
-                      <Activity className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Avg Order Value</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">${(Math.random() * 100 + 50).toFixed(0)}</p>
                     </div>
-                    <div className="flex items-center mt-2">
-                      <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
-                      <span className="text-sm text-green-600 dark:text-green-400">+5.7%</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    <Activity className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div className="flex items-center mt-2">
+                    <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
+                    <span className="text-sm text-green-600 dark:text-green-400">+5.7%</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-              {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-gray-900 dark:text-white">Revenue Trends</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={revenueData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                          <XAxis 
-                            dataKey="name" 
-                            stroke="#6b7280"
-                            fontSize={12}
-                          />
-                          <YAxis 
-                            stroke="#6b7280"
-                            fontSize={12}
-                          />
-                          <Tooltip 
-                            contentStyle={{
-                              backgroundColor: '#1f2937',
-                              border: '1px solid #374151',
-                              borderRadius: '8px',
-                              color: '#f9fafb'
-                            }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="value" 
-                            stroke="#3b82f6" 
-                            strokeWidth={2}
-                            dot={{ fill: '#3b82f6', strokeWidth: 2 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-gray-900 dark:text-white">Revenue Trends</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={revenueData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis 
+                          dataKey="name" 
+                          stroke="#6b7280"
+                          fontSize={12}
+                        />
+                        <YAxis 
+                          stroke="#6b7280"
+                          fontSize={12}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: '1px solid #374151',
+                            borderRadius: '8px',
+                            color: '#f9fafb'
+                          }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="#3b82f6" 
+                          strokeWidth={2}
+                          dot={{ fill: '#3b82f6', strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-gray-900 dark:text-white">Sales by Category</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={salesData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                          <XAxis 
-                            dataKey="name" 
-                            stroke="#6b7280"
-                            fontSize={12}
-                          />
-                          <YAxis 
-                            stroke="#6b7280"
-                            fontSize={12}
-                          />
-                          <Tooltip 
-                            contentStyle={{
-                              backgroundColor: '#1f2937',
-                              border: '1px solid #374151',
-                              borderRadius: '8px',
-                              color: '#f9fafb'
-                            }}
-                          />
-                          <Bar dataKey="sales" fill="#10b981" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-gray-900 dark:text-white">Sales by Category</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={salesData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis 
+                          dataKey="name" 
+                          stroke="#6b7280"
+                          fontSize={12}
+                        />
+                        <YAxis 
+                          stroke="#6b7280"
+                          fontSize={12}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: '1px solid #374151',
+                            borderRadius: '8px',
+                            color: '#f9fafb'
+                          }}
+                        />
+                        <Bar dataKey="sales" fill="#10b981" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-gray-900 dark:text-white">Customer Segments</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={salesData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                          <XAxis 
-                            dataKey="name" 
-                            stroke="#6b7280"
-                            fontSize={12}
-                          />
-                          <YAxis 
-                            stroke="#6b7280"
-                            fontSize={12}
-                          />
-                          <Tooltip 
-                            contentStyle={{
-                              backgroundColor: '#1f2937',
-                              border: '1px solid #374151',
-                              borderRadius: '8px',
-                              color: '#f9fafb'
-                            }}
-                          />
-                          <Bar dataKey="count" fill="#8b5cf6" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-gray-900 dark:text-white">Customer Segments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={salesData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis 
+                          dataKey="name" 
+                          stroke="#6b7280"
+                          fontSize={12}
+                        />
+                        <YAxis 
+                          stroke="#6b7280"
+                          fontSize={12}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: '1px solid #374151',
+                            borderRadius: '8px',
+                            color: '#f9fafb'
+                          }}
+                        />
+                        <Bar dataKey="count" fill="#8b5cf6" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-gray-900 dark:text-white">Product Performance</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={distributionData}
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {distributionData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip 
-                            contentStyle={{
-                              backgroundColor: '#1f2937',
-                              border: '1px solid #374151',
-                              borderRadius: '8px',
-                              color: '#f9fafb'
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </section>
-          )}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-gray-900 dark:text-white">Product Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={distributionData}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {distributionData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: '#1f2937',
+                            border: '1px solid #374151',
+                            borderRadius: '8px',
+                            color: '#f9fafb'
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* AI Insights Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">AI Insights</h2>
+            </div>
+            <AIInsightsDashboard />
+          </section>
+
+          {/* AI Assistant Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <MessageSquare className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">AI Assistant</h2>
+            </div>
+            <AIFeedback />
+          </section>
         </div>
       </main>
     </div>
