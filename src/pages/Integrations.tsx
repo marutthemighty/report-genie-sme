@@ -280,14 +280,19 @@ const Integrations = () => {
 
   const handleAddIntegration = () => {
     if (newIntegration.name && newIntegration.apiKey) {
-      const newId = `custom-${Date.now()}`;
-      addIntegration({
+      const newId = Math.max(...integrations.map(i => i.id)) + 1;
+      setIntegrations(prev => [...prev, {
         id: newId,
         name: newIntegration.name,
+        description: 'Custom integration',
         status: 'connected',
         lastSync: 'Just now',
-        apiKey: newIntegration.apiKey
-      });
+        enabled: true,
+        apiKey: newIntegration.apiKey,
+        logo: '🔌',
+        isConnecting: false,
+        showApiKey: false
+      }]);
       setNewIntegration({ name: '', apiKey: '', webhookUrl: '' });
       toast({
         title: "Integration Added",
