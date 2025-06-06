@@ -16,11 +16,6 @@ const ConsentModal = ({ isOpen, onClose }: ConsentModalProps) => {
   const [tempConsents, setTempConsents] = useState(consents);
   const [isEUOrCA, setIsEUOrCA] = useState(false);
   const [userLocation, setUserLocation] = useState<string>('');
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    setTempConsents(consents);
-  }, [consents]);
 
   useEffect(() => {
     // Detect user location based on timezone and other indicators
@@ -70,25 +65,16 @@ const ConsentModal = ({ isOpen, onClose }: ConsentModalProps) => {
       }
     };
 
-    if (isOpen) {
-      detectLocation();
-    }
-  }, [isOpen]);
+    detectLocation();
+  }, []);
 
   const handleConsentChange = (type: keyof typeof tempConsents, checked: boolean) => {
     setTempConsents(prev => ({ ...prev, [type]: checked }));
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await saveConsents(tempConsents);
-      onClose();
-    } catch (error) {
-      console.error('Failed to save consents:', error);
-    } finally {
-      setIsSaving(false);
-    }
+    await saveConsents(tempConsents);
+    onClose();
   };
 
   const handleDeclineAll = async () => {
@@ -100,20 +86,13 @@ const ConsentModal = ({ isOpen, onClose }: ConsentModalProps) => {
       if (!confirmed) return;
     }
 
-    setIsSaving(true);
-    try {
-      const declinedConsents = {
-        analytics: false,
-        storage: false,
-        marketing: false
-      };
-      await saveConsents(declinedConsents);
-      onClose();
-    } catch (error) {
-      console.error('Failed to save consents:', error);
-    } finally {
-      setIsSaving(false);
-    }
+    const declinedConsents = {
+      analytics: false,
+      storage: false,
+      marketing: false
+    };
+    await saveConsents(declinedConsents);
+    onClose();
   };
 
   // For EU/CA users, make the modal non-dismissible
@@ -207,16 +186,11 @@ const ConsentModal = ({ isOpen, onClose }: ConsentModalProps) => {
               variant="outline" 
               onClick={handleDeclineAll} 
               className="flex-1"
-              disabled={isSaving}
             >
               {isEUOrCA ? 'Decline Non-Essential' : 'Decline All'}
             </Button>
-            <Button 
-              onClick={handleSave} 
-              className="flex-1"
-              disabled={isSaving}
-            >
-              {isSaving ? 'Saving...' : (isEUOrCA ? 'Confirm Choices' : 'Save Preferences')}
+            <Button onClick={handleSave} className="flex-1">
+              {isEUOrCA ? 'Confirm Choices' : 'Save Preferences'}
             </Button>
           </div>
 

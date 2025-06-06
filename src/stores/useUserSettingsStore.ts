@@ -31,7 +31,6 @@ interface UserSettingsState {
     status: 'connected' | 'disconnected';
     lastSync: string;
     apiKey: string;
-    connectionData?: any;
   }>;
   setExportFormats: (formats: ExportFormats) => void;
   setNotifications: (notifications: NotificationSettings) => void;
@@ -106,40 +105,18 @@ export const useUserSettingsStore = create<UserSettingsState>()(
           if (!user) return;
           
           const settings = get();
-          
-          // First check if user settings exist
-          const { data: existingSettings } = await supabase
+          await supabase
             .from('user_settings')
-            .select('user_id')
-            .eq('user_id', user.id)
-            .single();
-          
-          const settingsData = {
-            user_id: user.id,
-            theme: 'system',
-            notification_email: settings.notifications.email,
-            notification_push: settings.notifications.push,
-            export_formats: settings.exportFormats as any,
-            privacy_settings: settings.privacy as any,
-            connected_integrations: settings.connectedIntegrations as any,
-            updated_at: new Date().toISOString(),
-          };
-          
-          if (existingSettings) {
-            // Update existing settings
-            await supabase
-              .from('user_settings')
-              .update(settingsData)
-              .eq('user_id', user.id);
-          } else {
-            // Insert new settings
-            await supabase
-              .from('user_settings')
-              .insert({
-                ...settingsData,
-                created_at: new Date().toISOString(),
-              });
-          }
+            .upsert({
+              user_id: user.id,
+              theme: 'system', // Keep existing theme logic
+              notification_email: settings.notifications.email,
+              notification_push: settings.notifications.push,
+              export_formats: settings.exportFormats,
+              privacy_settings: settings.privacy,
+              connected_integrations: settings.connectedIntegrations,
+              updated_at: new Date().toISOString(),
+            });
         } catch (error) {
           console.error('Failed to save settings:', error);
         }
@@ -154,32 +131,25 @@ export const useUserSettingsStore = create<UserSettingsState>()(
             .from('user_settings')
             .select('*')
             .eq('user_id', user.id)
-            .maybeSingle();
+            .single();
             
           if (data) {
-            // Helper function to safely parse JSON data
-            const safeParseJSON = <T>(value: unknown, fallback: T): T => {
-              if (value === null || value === undefined) return fallback;
-              if (typeof value === 'object') return value as T;
-              return fallback;
-            };
-            
             set({
               notifications: {
                 email: data.notification_email ?? true,
                 push: data.notification_push ?? false,
               },
-              exportFormats: safeParseJSON(data.export_formats, {
+              exportFormats: data.export_formats || {
                 pdf: true,
                 csv: true,
                 googleSlides: false,
-              }),
-              privacy: safeParseJSON(data.privacy_settings, {
+              },
+              privacy: data.privacy_settings || {
                 dataExportEnabled: true,
                 privacySettingsConfigured: false,
                 consentPreferencesSet: false,
-              }),
-              connectedIntegrations: safeParseJSON(data.connected_integrations, []),
+              },
+              connectedIntegrations: data.connected_integrations || [],
             });
           }
         } catch (error) {

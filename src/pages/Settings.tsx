@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,7 +24,6 @@ import Sidebar from '@/components/Sidebar';
 import ConsentModal from '@/components/ConsentModal';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useUserSettingsStore } from '@/stores/useUserSettingsStore';
-import { useConsent } from '@/hooks/useConsent';
 
 const Settings = () => {
   const { theme, setTheme } = useThemeStore();
@@ -44,35 +42,9 @@ const Settings = () => {
     loadFromDatabase
   } = useUserSettingsStore();
 
-  const { consents, saveConsents } = useConsent();
-
   useEffect(() => {
     loadFromDatabase();
   }, [loadFromDatabase]);
-
-  useEffect(() => {
-    // Listen for privacy settings updates from popup window
-    const handleStorageChange = () => {
-      const update = localStorage.getItem('privacy_settings_update');
-      if (update) {
-        const settings = JSON.parse(update);
-        saveConsents({
-          analytics: settings.analytics,
-          marketing: settings.marketing,
-          storage: settings.storage
-        });
-        localStorage.removeItem('privacy_settings_update');
-        toast({
-          title: "Privacy Settings Updated",
-          description: "Your privacy preferences have been saved.",
-        });
-      }
-    };
-
-    // Check for updates every second when settings page is active
-    const interval = setInterval(handleStorageChange, 1000);
-    return () => clearInterval(interval);
-  }, [saveConsents, toast]);
 
   const handleExportFormatChange = (format: keyof typeof exportFormats, enabled: boolean) => {
     setExportFormats({
@@ -97,6 +69,7 @@ const Settings = () => {
   };
 
   const handleAddIntegration = () => {
+    // Navigate to integrations page or open integration modal
     window.location.href = '/integrations';
   };
 
@@ -107,6 +80,7 @@ const Settings = () => {
       description: "We're preparing your data for export. This may take a few minutes.",
     });
 
+    // Simulate export process
     setTimeout(() => {
       const csvContent = `Date,Report Type,Status,Created By
 ${new Date().toISOString().split('T')[0]},Sales Performance,Completed,User
@@ -137,201 +111,51 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
   };
 
   const handleViewPrivacySettings = () => {
-    const privacyWindow = window.open('', '_blank', 'width=900,height=700');
+    toast({
+      title: "Privacy Settings",
+      description: "Opening privacy dashboard...",
+    });
+    
+    // Create a simple privacy settings modal/page
+    const privacyWindow = window.open('', '_blank', 'width=800,height=600');
     if (privacyWindow) {
       privacyWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Privacy Settings Dashboard</title>
+          <title>Privacy Settings</title>
           <style>
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
-              padding: 20px; 
-              line-height: 1.6; 
-              background: #f8fafc;
-              margin: 0;
-            }
-            .container { 
-              max-width: 800px; 
-              margin: 0 auto; 
-              background: white; 
-              border-radius: 12px; 
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-              overflow: hidden;
-            }
-            .header {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-              padding: 30px;
-              text-align: center;
-            }
-            .content { padding: 30px; }
-            .setting { 
-              margin: 25px 0; 
-              padding: 20px; 
-              border: 1px solid #e2e8f0; 
-              border-radius: 8px; 
-              background: #f8fafc;
-            }
-            .setting h3 {
-              margin-top: 0;
-              color: #2d3748;
-              font-size: 18px;
-            }
-            .toggle-group {
-              margin: 15px 0;
-            }
-            .toggle {
-              display: flex;
-              align-items: center;
-              margin: 10px 0;
-              padding: 8px 0;
-            }
-            .toggle input[type="checkbox"] {
-              margin-right: 12px;
-              transform: scale(1.2);
-            }
-            .toggle label {
-              cursor: pointer;
-              font-weight: 500;
-            }
-            button { 
-              background: #4f46e5; 
-              color: white; 
-              border: none; 
-              padding: 12px 24px; 
-              border-radius: 6px; 
-              cursor: pointer;
-              font-weight: 600;
-              transition: background 0.2s;
-            }
-            button:hover { 
-              background: #4338ca; 
-            }
-            .success-msg {
-              background: #d1fae5;
-              border: 1px solid #a7f3d0;
-              color: #065f46;
-              padding: 12px 16px;
-              border-radius: 6px;
-              margin-top: 20px;
-              display: none;
-            }
-            .info-box {
-              background: #dbeafe;
-              border: 1px solid #93c5fd;
-              color: #1e40af;
-              padding: 15px;
-              border-radius: 6px;
-              margin: 15px 0;
-              font-size: 14px;
-            }
+            body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .setting { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+            .toggle { display: inline-block; margin-left: 10px; }
+            button { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+            button:hover { background: #2563eb; }
           </style>
         </head>
         <body>
           <div class="container">
-            <div class="header">
-              <h1>Privacy Settings Dashboard</h1>
-              <p>Manage your data and privacy preferences</p>
+            <h1>Privacy Settings</h1>
+            <div class="setting">
+              <h3>Data Collection</h3>
+              <p>Control how we collect and use your data for analytics and service improvement.</p>
+              <label><input type="checkbox" checked> Analytics tracking</label><br>
+              <label><input type="checkbox" checked> Performance monitoring</label><br>
+              <label><input type="checkbox"> Marketing communications</label>
             </div>
-            
-            <div class="content">
-              <div class="setting">
-                <h3>🍪 Cookie & Tracking Preferences</h3>
-                <p>Control which cookies and tracking technologies we can use.</p>
-                <div class="toggle-group">
-                  <div class="toggle">
-                    <input type="checkbox" id="essential" checked disabled>
-                    <label for="essential">Essential cookies (required for basic functionality)</label>
-                  </div>
-                  <div class="toggle">
-                    <input type="checkbox" id="analytics" ${consents.analytics ? 'checked' : ''}>
-                    <label for="analytics">Analytics cookies (help us improve our service)</label>
-                  </div>
-                  <div class="toggle">
-                    <input type="checkbox" id="marketing" ${consents.marketing ? 'checked' : ''}>
-                    <label for="marketing">Marketing cookies (personalized content and ads)</label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="setting">
-                <h3>📊 Data Collection</h3>
-                <p>Control how we collect and use your data for analytics and service improvement.</p>
-                <div class="toggle-group">
-                  <div class="toggle">
-                    <input type="checkbox" id="usage-analytics" ${consents.storage ? 'checked' : ''}>
-                    <label for="usage-analytics">Usage analytics and performance monitoring</label>
-                  </div>
-                  <div class="toggle">
-                    <input type="checkbox" id="error-reporting" checked>
-                    <label for="error-reporting">Error reporting and crash analytics</label>
-                  </div>
-                  <div class="toggle">
-                    <input type="checkbox" id="feature-usage" ${consents.analytics ? 'checked' : ''}>
-                    <label for="feature-usage">Feature usage tracking</label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="setting">
-                <h3>📧 Communication Preferences</h3>
-                <p>Choose how we can communicate with you.</p>
-                <div class="toggle-group">
-                  <div class="toggle">
-                    <input type="checkbox" id="product-updates" ${consents.marketing ? 'checked' : ''}>
-                    <label for="product-updates">Product updates and new features</label>
-                  </div>
-                  <div class="toggle">
-                    <input type="checkbox" id="newsletters" ${consents.marketing ? 'checked' : ''}>
-                    <label for="newsletters">Marketing newsletters and tips</label>
-                  </div>
-                  <div class="toggle">
-                    <input type="checkbox" id="security-alerts" checked disabled>
-                    <label for="security-alerts">Security alerts and account notifications (required)</label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="setting">
-                <h3>🔒 Data Retention</h3>
-                <div class="info-box">
-                  <strong>Data Retention Policy:</strong> Your data is retained for 2 years after account deletion, as required by law. 
-                  You can request immediate deletion of personal data by contacting our support team.
-                </div>
-                <p><strong>Last data export:</strong> ${privacy.lastDataExport ? new Date(privacy.lastDataExport).toLocaleDateString() : 'Never'}</p>
-              </div>
-
-              <div style="text-align: center; margin-top: 30px;">
-                <button onclick="saveSettings()">Save Privacy Settings</button>
-                <div id="success-msg" class="success-msg">
-                  ✅ Your privacy settings have been saved successfully!
-                </div>
-              </div>
+            <div class="setting">
+              <h3>Cookie Preferences</h3>
+              <p>Manage which cookies we can store on your device.</p>
+              <label><input type="checkbox" checked disabled> Essential cookies (required)</label><br>
+              <label><input type="checkbox" checked> Functional cookies</label><br>
+              <label><input type="checkbox"> Marketing cookies</label>
+            </div>
+            <div class="setting">
+              <h3>Data Retention</h3>
+              <p>Your data is retained for 2 years after account deletion, as required by law.</p>
+              <button onclick="alert('Settings saved!')">Save Privacy Settings</button>
             </div>
           </div>
-
-          <script>
-            function saveSettings() {
-              const analytics = document.getElementById('analytics').checked;
-              const marketing = document.getElementById('marketing').checked;
-              const storage = document.getElementById('usage-analytics').checked;
-              
-              localStorage.setItem('privacy_settings_update', JSON.stringify({
-                analytics,
-                marketing,
-                storage,
-                timestamp: Date.now()
-              }));
-              
-              document.getElementById('success-msg').style.display = 'block';
-              
-              setTimeout(() => {
-                window.close();
-              }, 2000);
-            }
-          </script>
         </body>
         </html>
       `);
