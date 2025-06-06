@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ import Sidebar from '@/components/Sidebar';
 import ConsentModal from '@/components/ConsentModal';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useUserSettingsStore } from '@/stores/useUserSettingsStore';
-import { useConsent } from '@/hooks/use-consent';
+import { useConsent } from '@/hooks/useConsent';
 
 const Settings = () => {
   const { theme, setTheme } = useThemeStore();
@@ -49,6 +50,30 @@ const Settings = () => {
     loadFromDatabase();
   }, [loadFromDatabase]);
 
+  useEffect(() => {
+    // Listen for privacy settings updates from popup window
+    const handleStorageChange = () => {
+      const update = localStorage.getItem('privacy_settings_update');
+      if (update) {
+        const settings = JSON.parse(update);
+        saveConsents({
+          analytics: settings.analytics,
+          marketing: settings.marketing,
+          storage: settings.storage
+        });
+        localStorage.removeItem('privacy_settings_update');
+        toast({
+          title: "Privacy Settings Updated",
+          description: "Your privacy preferences have been saved.",
+        });
+      }
+    };
+
+    // Check for updates every second when settings page is active
+    const interval = setInterval(handleStorageChange, 1000);
+    return () => clearInterval(interval);
+  }, [saveConsents, toast]);
+
   const handleExportFormatChange = (format: keyof typeof exportFormats, enabled: boolean) => {
     setExportFormats({
       ...exportFormats,
@@ -72,7 +97,6 @@ const Settings = () => {
   };
 
   const handleAddIntegration = () => {
-    // Navigate to integrations page or open integration modal
     window.location.href = '/integrations';
   };
 
@@ -83,7 +107,6 @@ const Settings = () => {
       description: "We're preparing your data for export. This may take a few minutes.",
     });
 
-    // Simulate export process
     setTimeout(() => {
       const csvContent = `Date,Report Type,Status,Created By
 ${new Date().toISOString().split('T')[0]},Sales Performance,Completed,User
@@ -114,7 +137,6 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
   };
 
   const handleViewPrivacySettings = () => {
-    // Create a more comprehensive privacy settings interface
     const privacyWindow = window.open('', '_blank', 'width=900,height=700');
     if (privacyWindow) {
       privacyWindow.document.write(`
@@ -292,12 +314,10 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
 
           <script>
             function saveSettings() {
-              // Save the settings
               const analytics = document.getElementById('analytics').checked;
               const marketing = document.getElementById('marketing').checked;
               const storage = document.getElementById('usage-analytics').checked;
               
-              // Store in localStorage to sync back to parent window
               localStorage.setItem('privacy_settings_update', JSON.stringify({
                 analytics,
                 marketing,
@@ -305,10 +325,8 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
                 timestamp: Date.now()
               }));
               
-              // Show success message
               document.getElementById('success-msg').style.display = 'block';
               
-              // Auto-close after 2 seconds
               setTimeout(() => {
                 window.close();
               }, 2000);

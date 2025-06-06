@@ -29,7 +29,7 @@ import { useUserSettingsStore } from '@/stores/useUserSettingsStore';
 const Reports = () => {
   const { toast } = useToast();
   const { exportFormats } = useUserSettingsStore();
-  const { reports, isLoading } = useReports();
+  const { reports, loading } = useReports();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -133,7 +133,6 @@ const Reports = () => {
       description: `Generating PDF for "${reportName}"...`,
     });
 
-    // Simulate PDF generation
     setTimeout(() => {
       toast({
         title: "PDF Ready",
@@ -148,7 +147,6 @@ const Reports = () => {
       description: `Generating CSV for "${reportName}"...`,
     });
 
-    // Simulate CSV generation
     setTimeout(() => {
       const csvContent = `Report Name,Type,Status,Created Date
 "${reportName}",Sales,Completed,${new Date().toLocaleDateString()}`;
@@ -176,7 +174,6 @@ const Reports = () => {
       description: `Creating presentation for "${reportName}"...`,
     });
 
-    // Simulate Google Slides export
     setTimeout(() => {
       toast({
         title: "Slides Ready",
@@ -202,6 +199,15 @@ const Reports = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const handleCreateReport = (reportData: any) => {
+    // Handle report creation
+    toast({
+      title: "Report Created",
+      description: "Your report has been created successfully.",
+    });
+    setIsCreateModalOpen(false);
   };
 
   return (
@@ -266,7 +272,7 @@ const Reports = () => {
           </div>
 
           {/* Reports Grid */}
-          {isLoading ? (
+          {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-4 text-gray-600 dark:text-gray-300">Loading reports...</p>
@@ -296,7 +302,7 @@ const Reports = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         {getReportTypeIcon(report.report_type)}
-                        <CardTitle className="text-lg leading-tight truncate" title={report.name}>
+                        <CardTitle className="text-lg leading-tight break-words hyphens-auto" title={report.name}>
                           {report.name}
                         </CardTitle>
                       </div>
@@ -307,22 +313,22 @@ const Reports = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                         <User className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{report.data_source}</span>
+                        <span className="break-words">{report.data_source}</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                         <Calendar className="w-4 h-4 shrink-0" />
-                        <span className="truncate">{report.date_range}</span>
+                        <span className="break-words">{report.date_range}</span>
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         Created: {formatDate(report.created_at)}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2">
+                    <div className="flex items-center gap-2 pt-2 flex-wrap">
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        className="flex-1"
+                        className="flex-1 min-w-0"
                         disabled={report.status !== 'completed'}
                       >
                         <Eye className="w-4 h-4 mr-1" />
@@ -332,13 +338,13 @@ const Reports = () => {
                       {report.status === 'completed' && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline">
+                            <Button size="sm" variant="outline" className="shrink-0">
                               <Download className="w-4 h-4 mr-1" />
                               Export
                               <ChevronDown className="w-3 h-3 ml-1" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg z-50">
                             {exportFormats.pdf && (
                               <DropdownMenuItem onClick={() => handleExportPDF(report.id, report.name)}>
                                 <FileText className="w-4 h-4 mr-2" />
@@ -365,7 +371,7 @@ const Reports = () => {
                         size="sm" 
                         variant="outline"
                         onClick={() => handleDeleteReport(report.id, report.name)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -380,6 +386,7 @@ const Reports = () => {
         <CreateReportModal 
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
+          onSubmit={handleCreateReport}
         />
       </main>
     </div>
