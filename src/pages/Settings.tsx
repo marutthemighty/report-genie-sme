@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,50 +24,20 @@ import {
 import Sidebar from '@/components/Sidebar';
 import ConsentModal from '@/components/ConsentModal';
 import { useThemeStore } from '@/stores/useThemeStore';
-import { useUserSettingsStore } from '@/stores/useUserSettingsStore';
 
 const Settings = () => {
   const { theme, setTheme } = useThemeStore();
   const { toast } = useToast();
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [pushNotifications, setPushNotifications] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   
-  const {
-    exportFormats,
-    notifications,
-    privacy,
-    connectedIntegrations,
-    setExportFormats,
-    setNotifications,
-    setPrivacySettings,
-    loadFromDatabase
-  } = useUserSettingsStore();
-
-  useEffect(() => {
-    loadFromDatabase();
-  }, [loadFromDatabase]);
-
-  const handleExportFormatChange = (format: keyof typeof exportFormats, enabled: boolean) => {
-    setExportFormats({
-      ...exportFormats,
-      [format]: enabled
-    });
-    toast({
-      title: "Export Format Updated",
-      description: `${format.toUpperCase()} export ${enabled ? 'enabled' : 'disabled'}.`,
-    });
-  };
-
-  const handleNotificationChange = (type: keyof typeof notifications, enabled: boolean) => {
-    setNotifications({
-      ...notifications,
-      [type]: enabled
-    });
-    toast({
-      title: "Notification Settings Updated",
-      description: `${type} notifications ${enabled ? 'enabled' : 'disabled'}.`,
-    });
-  };
+  // Realistic integration states - all start as disconnected
+  const [integrations, setIntegrations] = useState([
+    { id: 1, name: 'Shopify', status: 'disconnected', lastSync: 'Never', apiKey: '' },
+    { id: 2, name: 'Google Analytics', status: 'disconnected', lastSync: 'Never', apiKey: '' },
+  ]);
 
   const handleAddIntegration = () => {
     // Navigate to integrations page or open integration modal
@@ -82,6 +53,7 @@ const Settings = () => {
 
     // Simulate export process
     setTimeout(() => {
+      // Create a sample CSV file
       const csvContent = `Date,Report Type,Status,Created By
 ${new Date().toISOString().split('T')[0]},Sales Performance,Completed,User
 ${new Date().toISOString().split('T')[0]},Customer Analysis,Completed,User
@@ -96,11 +68,6 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
-      setPrivacySettings({
-        ...privacy,
-        lastDataExport: new Date().toISOString()
-      });
 
       setIsExporting(false);
       toast({
@@ -221,51 +188,51 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
             </CardContent>
           </Card>
 
-          {/* Integrations - Only show connected ones */}
+          {/* Integrations */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="w-5 h-5" />
-                Connected Integrations
+                Data Integrations
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Manage your connected data sources
+                  Connect your data sources to generate comprehensive reports
                 </p>
-                <Button onClick={() => window.location.href = '/integrations'} size="sm">
+                <Button onClick={handleAddIntegration} size="sm">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Integration
                 </Button>
               </div>
               
               <div className="space-y-3">
-                {connectedIntegrations.length > 0 ? (
-                  connectedIntegrations.map((integration) => (
-                    <div key={integration.id} className="flex items-center justify-between p-3 border rounded-lg dark:border-gray-700">
-                      <div className="flex items-center gap-3">
-                        <Key className="w-4 h-4 text-gray-400" />
-                        <div>
-                          <p className="font-medium dark:text-white">{integration.name}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Last sync: {integration.lastSync}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200">
-                          Connected
-                        </Badge>
-                        <Button variant="outline" size="sm" onClick={() => window.location.href = '/integrations'}>
-                          Configure
-                        </Button>
+                {integrations.map((integration) => (
+                  <div key={integration.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Key className="w-4 h-4 text-gray-400" />
+                      <div>
+                        <p className="font-medium">{integration.name}</p>
+                        <p className="text-sm text-gray-500">Last sync: {integration.lastSync}</p>
                       </div>
                     </div>
-                  ))
-                ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant={integration.status === 'connected' ? 'default' : 'secondary'}>
+                        {integration.status}
+                      </Badge>
+                      <Button variant="outline" size="sm" onClick={handleAddIntegration}>
+                        {integration.status === 'connected' ? 'Configure' : 'Connect'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                
+                {integrations.length === 0 && (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                     <Database className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No integrations connected yet</p>
-                    <p className="text-sm">Visit the Integrations page to get started</p>
+                    <p className="text-sm">Click "Add Integration" to get started</p>
                   </div>
                 )}
               </div>
@@ -283,27 +250,15 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="pdf-export" 
-                    checked={exportFormats.pdf}
-                    onCheckedChange={(checked) => handleExportFormatChange('pdf', checked)}
-                  />
+                  <Switch id="pdf-export" defaultChecked />
                   <Label htmlFor="pdf-export">PDF Reports</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="csv-export" 
-                    checked={exportFormats.csv}
-                    onCheckedChange={(checked) => handleExportFormatChange('csv', checked)}
-                  />
+                  <Switch id="csv-export" defaultChecked />
                   <Label htmlFor="csv-export">CSV Data</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="slides-export" 
-                    checked={exportFormats.googleSlides}
-                    onCheckedChange={(checked) => handleExportFormatChange('googleSlides', checked)}
-                  />
+                  <Switch id="slides-export" />
                   <Label htmlFor="slides-export">Google Slides</Label>
                 </div>
               </div>
@@ -329,8 +284,8 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
                   </div>
                   <Switch
                     id="email-notifications"
-                    checked={notifications.email}
-                    onCheckedChange={(checked) => handleNotificationChange('email', checked)}
+                    checked={emailNotifications}
+                    onCheckedChange={setEmailNotifications}
                   />
                 </div>
                 
@@ -343,8 +298,8 @@ ${new Date().toISOString().split('T')[0]},Product Performance,Completed,User`;
                   </div>
                   <Switch
                     id="push-notifications"
-                    checked={notifications.push}
-                    onCheckedChange={(checked) => handleNotificationChange('push', checked)}
+                    checked={pushNotifications}
+                    onCheckedChange={setPushNotifications}
                   />
                 </div>
               </div>
